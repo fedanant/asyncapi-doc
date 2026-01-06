@@ -1,4 +1,4 @@
-.PHONY: build clean test fmt lint install run help
+.PHONY: build clean test fmt lint lint-install install run help
 
 BINARY_NAME=ag
 BUILD_DIR=bin
@@ -55,7 +55,23 @@ lint:
 	@if command -v golangci-lint > /dev/null; then \
 		golangci-lint run ./...; \
 	else \
-		echo "golangci-lint not installed. Install from https://golangci-lint.run/"; \
+		echo "❌ golangci-lint not installed."; \
+		echo ""; \
+		echo "Install it with: make lint-install"; \
+		echo "Or visit: https://golangci-lint.run/usage/install/"; \
+		exit 1; \
+	fi
+
+# Install golangci-lint
+lint-install:
+	@echo "Installing golangci-lint..."
+	@if command -v golangci-lint > /dev/null; then \
+		echo "✓ golangci-lint is already installed"; \
+		golangci-lint version; \
+	else \
+		echo "Installing golangci-lint via go install..."; \
+		go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest; \
+		echo "✓ golangci-lint installed successfully"; \
 	fi
 
 # Tidy up dependencies

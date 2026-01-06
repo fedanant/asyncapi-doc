@@ -36,6 +36,11 @@ Thumbs.db
 # Generated files
 output/
 *.log
+coverage.out
+coverage.html
+
+# Linter cache
+.golangci-cache/
 
 # Config files (may contain sensitive data)
 *.local.json

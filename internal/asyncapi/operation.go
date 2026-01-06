@@ -115,35 +115,46 @@ func (operation *Operation) ParseResponse(name string, astFile *ast.Package) {
 
 func GetByNameType(typeName string, astFile *ast.Package) interface{} {
 	hasArray := false
+	originalTypeName := typeName
+
 	if strings.HasPrefix(typeName, "[]") {
 		hasArray = true
 		typeName = typeName[2:]
 	}
-	if TransToReflectType(typeName) == nil && !strings.Contains(typeName, ".") {
-		typeName = astFile.Name + "." + typeName
-	}
 
 	typeSpec := TransToReflectType(typeName)
 	if typeSpec != nil {
+		if hasArray {
+			return []interface{}{typeSpec}
+		}
 		return typeSpec
 	}
 
-	refType := reflect2.TypeByName(typeName)
-
-	if refType == nil {
-		log.Printf("warning: type '%s' not found in runtime, using placeholder", typeName)
-		// Return a placeholder struct for types not available at runtime
+	typeInfo := ExtractTypeFromAST(typeName, astFile)
+	if typeInfo != nil {
+		instance := CreateReflectValue(typeInfo)
 		if hasArray {
-			return []interface{}{}
+			sliceType := reflect.SliceOf(reflect.TypeOf(instance))
+			return reflect.MakeSlice(sliceType, 0, 0).Interface()
 		}
-		return struct{}{}
+		return instance
 	}
 
-	if hasArray {
-		return reflect.MakeSlice(reflect.SliceOf(refType.Type1()), 0, 10).Interface()
-	} else {
+	if !strings.Contains(typeName, ".") {
+		typeName = astFile.Name + "." + typeName
+	}
+
+	refType := reflect2.TypeByName(typeName)
+	if refType != nil {
+		if hasArray {
+			return reflect.MakeSlice(reflect.SliceOf(refType.Type1()), 0, 10).Interface()
+		}
+
 		return refType.New()
 	}
+
+	log.Printf("warning: type '%s' not found, using empty struct", originalTypeName)
+	return struct{}{}
 }
 
 func TransToReflectType(typeName string) interface{} {
@@ -153,9 +164,9 @@ func TransToReflectType(typeName string) interface{} {
 	case "float32", "float64":
 		return float32(0)
 	case "bool":
-		return bool(false)
+		return false
 	case "string":
-		return string("")
+		return ""
 	}
 
 	return nil

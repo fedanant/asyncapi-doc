@@ -1,0 +1,168 @@
+# golangci-lint configuration
+# Documentation: https://golangci-lint.run/usage/configuration/
+
+run:
+  timeout: 5m
+  tests: true
+  modules-download-mode: readonly
+
+output:
+  formats:
+    - format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+
+linters:
+  enable:
+    # Enabled by default
+    - errcheck      # Check for unchecked errors
+    - gosimple      # Simplify code
+    - govet         # Reports suspicious constructs
+    - ineffassign   # Detect ineffectual assignments
+    - staticcheck   # Staticcheck is a go vet on steroids
+    - unused        # Check for unused constants, variables, functions and types
+
+    # Additional linters
+    - gofmt         # Check code formatting
+    - goimports     # Check import order
+    - misspell      # Find commonly misspelled words
+    - revive        # Fast, configurable, extensible, flexible, and beautiful linter for Go
+    - unconvert     # Remove unnecessary type conversions
+    - unparam       # Find unused function parameters
+    - gosec         # Security checker
+    - gocritic      # Opinionated Go source code linter
+    - gocyclo       # Computes and checks cyclomatic complexity
+    - dupl          # Tool for code clone detection
+    - exhaustive    # Check exhaustiveness of enum switch statements
+    - copyloopvar   # Check for pointers to enclosing loop variables (replaces exportloopref)
+    - gci           # Control Go package import order
+    - godot         # Check comments end in a period
+    - nolintlint    # Reports ill-formed or insufficient nolint directives
+    - stylecheck    # Stylecheck is a replacement for golint
+    - whitespace    # Check for unnecessary newlines
+
+  disable:
+    - typecheck     # Can conflict with build tags
+    - err113        # Too strict for error handling
+    - wrapcheck     # Too strict for error wrapping
+    - varnamelen    # Too strict for variable names
+    - tagliatelle   # Too opinionated about struct tags
+    - testpackage   # Forces test packages to be separate
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+    exclude-functions:
+      - fmt.Fprintf
+      - fmt.Fprintln
+
+  govet:
+    enable-all: true
+    disable:
+      - shadow
+      - fieldalignment
+
+  gofmt:
+    simplify: true
+
+  goimports:
+    local-prefixes: github.com/fedanant/asyncapi-generator
+
+  gocyclo:
+    min-complexity: 15
+
+  dupl:
+    threshold: 100
+
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - style
+      - performance
+      - experimental
+      - opinionated
+    disabled-checks:
+      - whyNoLint
+      - commentFormatting
+
+  gosec:
+    severity: medium
+    confidence: medium
+    excludes:
+      - G104  # Audit errors not checked (covered by errcheck)
+      - G304  # File path provided as taint input (false positives)
+
+  stylecheck:
+    checks: ["all", "-ST1000", "-ST1003", "-ST1016", "-ST1020", "-ST1021", "-ST1022"]
+
+  revive:
+    rules:
+      - name: blank-imports
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: dot-imports
+      - name: error-return
+      - name: error-strings
+      - name: error-naming
+      - name: exported
+      - name: increment-decrement
+      - name: var-naming
+      - name: var-declaration
+      - name: package-comments
+      - name: range
+      - name: receiver-naming
+      - name: time-naming
+      - name: unexported-return
+      - name: indent-error-flow
+      - name: errorf
+      - name: empty-block
+      - name: superfluous-else
+      - name: unused-parameter
+      - name: unreachable-code
+      - name: redefines-builtin-id
+
+  nolintlint:
+    allow-unused: false
+    require-explanation: true
+    require-specific: true
+
+issues:
+  exclude-rules:
+    # Exclude some linters from running on tests files
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - errcheck
+        - dupl
+        - gosec
+        - gocritic
+
+    # Exclude AST parsing code from complexity checks
+    - path: internal/asyncapi/ast_types\.go
+      linters:
+        - gocyclo
+        - gocognit
+
+    # Exclude generated code
+    - path: ".*\\.pb\\.go"
+      linters:
+        - all
+
+    # Allow main packages to not have package comments
+    - path: cmd/
+      linters:
+        - revive
+      text: "package-comments"
+
+    # Allow log.Println in certain places
+    - linters:
+        - forbidigo
+      text: "use of `log.Println` forbidden"
+
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  new: false
+
+severity:
+  default-severity: error

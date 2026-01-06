@@ -17,7 +17,6 @@ func DefaultConfig() *Config {
 	return &Config{
 		DefaultTemplate: "default",
 		OutputDir:       "./output",
-		Verbose:         false,
 	}
 }
 
