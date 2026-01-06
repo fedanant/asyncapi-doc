@@ -27,12 +27,13 @@ func main() {
 2. Add coments pub, sub
 
 ```go
-// @Type Pub
-// @Name {ownerId}.notify.get
-// @Description description
-// @summary summary
-// @Payload notifyer.Notify
-// @Response notifyer.Notify
+// PublishUserCreated publishes a user created event
+// @type pub
+// @name user.created
+// @summary User Created Event
+// @description Publishes an event when a new user is created
+// @payload UserCreatedEvent
+return s.nc.Publish("user.created", data)
 ```
 
 3. Generate command
