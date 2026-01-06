@@ -49,3 +49,4 @@ coverage.html
 .worktrees/
 .claude/
 .auto-claude/
+.claude_settings.json

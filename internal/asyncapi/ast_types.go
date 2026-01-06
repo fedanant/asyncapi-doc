@@ -278,9 +278,10 @@ func getReflectType(typeName string, isArray bool) reflect.Type {
 	case "time.Time":
 		baseType = reflect.TypeOf(time.Time{})
 	default:
-		// For unknown types, use interface{}
-		log.Printf("Unknown type '%s', using interface{}", typeName)
 		baseType = reflect.TypeOf((*interface{})(nil)).Elem()
+	}
+	if baseType != nil {
+		log.Printf("Unknown type '%s', using interface{}", typeName)
 	}
 
 	if isArray {
