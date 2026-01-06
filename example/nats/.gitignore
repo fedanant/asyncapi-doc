@@ -1,0 +1,15 @@
+# Generated AsyncAPI spec
+asyncapi.yaml
+
+# Binary
+nats-example
+
+# Go test coverage
+coverage.out
+coverage.html
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
