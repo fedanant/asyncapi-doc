@@ -1,0 +1,34 @@
+{
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true
+  },
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Read(./**)",
+      "Write(./**)",
+      "Edit(./**)",
+      "Glob(./**)",
+      "Grep(./**)",
+      "Read(/Users/poulshimankov/Documents/projects/asyncapi-generator/**)",
+      "Write(/Users/poulshimankov/Documents/projects/asyncapi-generator/**)",
+      "Edit(/Users/poulshimankov/Documents/projects/asyncapi-generator/**)",
+      "Glob(/Users/poulshimankov/Documents/projects/asyncapi-generator/**)",
+      "Grep(/Users/poulshimankov/Documents/projects/asyncapi-generator/**)",
+      "Read(/Users/poulshimankov/Documents/projects/asyncapi-generator/.auto-claude/specs/003-recite-the-example-more-clearly-and-write-all-the-/**)",
+      "Write(/Users/poulshimankov/Documents/projects/asyncapi-generator/.auto-claude/specs/003-recite-the-example-more-clearly-and-write-all-the-/**)",
+      "Edit(/Users/poulshimankov/Documents/projects/asyncapi-generator/.auto-claude/specs/003-recite-the-example-more-clearly-and-write-all-the-/**)",
+      "Bash(*)",
+      "WebFetch(*)",
+      "WebSearch(*)",
+      "mcp__context7__resolve-library-id(*)",
+      "mcp__context7__get-library-docs(*)",
+      "mcp__graphiti-memory__search_nodes(*)",
+      "mcp__graphiti-memory__search_facts(*)",
+      "mcp__graphiti-memory__add_episode(*)",
+      "mcp__graphiti-memory__get_episodes(*)",
+      "mcp__graphiti-memory__get_entity_edge(*)"
+    ]
+  }
+}

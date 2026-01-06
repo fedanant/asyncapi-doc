@@ -45,3 +45,6 @@ coverage.html
 # Config files (may contain sensitive data)
 *.local.json
 .env
+
+# Auto Claude data directory
+.auto-claude/

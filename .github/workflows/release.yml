@@ -1,0 +1,79 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.24'
+
+    - name: Run tests
+      run: go test -v ./...
+
+    - name: Build binaries
+      run: |
+        # Build for multiple platforms
+        GOOS=linux GOARCH=amd64 go build -o bin/ag-linux-amd64 ./cmd/asyncapi-generator
+        GOOS=linux GOARCH=arm64 go build -o bin/ag-linux-arm64 ./cmd/asyncapi-generator
+        GOOS=darwin GOARCH=amd64 go build -o bin/ag-darwin-amd64 ./cmd/asyncapi-generator
+        GOOS=darwin GOARCH=arm64 go build -o bin/ag-darwin-arm64 ./cmd/asyncapi-generator
+        GOOS=windows GOARCH=amd64 go build -o bin/ag-windows-amd64.exe ./cmd/asyncapi-generator
+
+    - name: Create archives
+      run: |
+        cd bin
+        tar -czf ag-linux-amd64.tar.gz ag-linux-amd64
+        tar -czf ag-linux-arm64.tar.gz ag-linux-arm64
+        tar -czf ag-darwin-amd64.tar.gz ag-darwin-amd64
+        tar -czf ag-darwin-arm64.tar.gz ag-darwin-arm64
+        zip ag-windows-amd64.zip ag-windows-amd64.exe
+
+    - name: Generate changelog
+      id: changelog
+      run: |
+        # Get the previous tag
+        PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+
+        if [ -z "$PREV_TAG" ]; then
+          echo "## Changes" > CHANGELOG.md
+          git log --pretty=format:"- %s (%h)" >> CHANGELOG.md
+        else
+          echo "## Changes since $PREV_TAG" > CHANGELOG.md
+          git log $PREV_TAG..HEAD --pretty=format:"- %s (%h)" >> CHANGELOG.md
+        fi
+
+        echo "changelog<<EOF" >> $GITHUB_OUTPUT
+        cat CHANGELOG.md >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        body: ${{ steps.changelog.outputs.changelog }}
+        files: |
+          bin/ag-linux-amd64.tar.gz
+          bin/ag-linux-arm64.tar.gz
+          bin/ag-darwin-amd64.tar.gz
+          bin/ag-darwin-arm64.tar.gz
+          bin/ag-windows-amd64.zip
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

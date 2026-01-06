@@ -1,5 +1,13 @@
 # AsyncAPI Generator
 
+[![Go Version](https://img.shields.io/github/go-mod/go-version/fedanant/asyncapi-generator)](https://go.dev/doc/devel/release)
+[![CI](https://github.com/fedanant/asyncapi-generator/actions/workflows/ci.yml/badge.svg)](https://github.com/fedanant/asyncapi-generator/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/fedanant/asyncapi-generator)](https://goreportcard.com/report/github.com/fedanant/asyncapi-generator)
+[![codecov](https://codecov.io/gh/fedanant/asyncapi-generator/branch/main/graph/badge.svg)](https://codecov.io/gh/fedanant/asyncapi-generator)
+[![GoDoc](https://pkg.go.dev/badge/github.com/fedanant/asyncapi-generator)](https://pkg.go.dev/github.com/fedanant/asyncapi-generator)
+[![License](https://img.shields.io/github/license/fedanant/asyncapi-generator)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/fedanant/asyncapi-generator)](https://github.com/fedanant/asyncapi-generator/releases/latest)
+
 AsyncAPI Generator is a code-to-spec tool that automatically generates AsyncAPI specifications from your Go code, similar to how [Swag](https://github.com/swaggo/swag) works for OpenAPI.
 
 ## Installation
@@ -301,15 +309,6 @@ func (s *Service) PublishOrderPlaced(event OrderPlacedEvent) error {
 }
 ```
 
-**Best Practices for NATS Subjects:**
-
-1. **Use hierarchical naming** - `namespace.entity.action` (e.g., `orders.warehouse.shipped`)
-2. **Keep subjects lowercase** - Use `user.created` not `User.Created`
-3. **Use dots as separators** - Not dashes or underscores
-4. **Put wildcards at the end** - `orders.*.shipped` is better than `*.orders.shipped`
-5. **Document parameters clearly** - Use `{paramName}` for dynamic parts
-6. **Avoid deep nesting** - 3-5 levels is usually sufficient
-
 ### Complete Example
 
 ```go
@@ -446,12 +445,3 @@ npm install -g @asyncapi/generator
 # Generate HTML docs
 asyncapi generate fromTemplate ./asyncapi.yaml @asyncapi/html-template -o ./docs
 ```
-
-### Markdown Documentation
-
-Markdown documentation for your repository:
-
-```bash
-asyncapi generate fromTemplate ./asyncapi.yaml @asyncapi/markdown-template -o ./docs
-```
-
