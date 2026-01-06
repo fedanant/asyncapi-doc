@@ -47,3 +47,17 @@ type OrderShippedEvent struct {
 	Carrier        string    `json:"carrier"`
 	ShippedAt      time.Time `json:"shippedAt"`
 }
+
+// GetUserRequest represents a request to get user details
+type GetUserRequest struct {
+	UserID string `json:"userId"`
+}
+
+// GetUserResponse represents the response with user details
+type GetUserResponse struct {
+	UserID    string    `json:"userId"`
+	Email     string    `json:"email"`
+	Username  string    `json:"username"`
+	CreatedAt time.Time `json:"createdAt"`
+	Found     bool      `json:"found"`
+}

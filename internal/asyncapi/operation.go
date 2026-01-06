@@ -8,8 +8,6 @@ import (
 	"strings"
 
 	"github.com/modern-go/reflect2"
-	"github.com/swaggest/go-asyncapi/reflector/asyncapi-2.4.0"
-	"github.com/swaggest/go-asyncapi/spec-2.4.0"
 )
 
 type Msg struct {
@@ -21,12 +19,28 @@ type MsgResponse struct {
 	Response interface{} `json:"response"`
 }
 
+// MessageInfo holds message metadata for AsyncAPI 3.0 operations.
+// Replaces the swaggest asyncapi.MessageSample for 3.0 compatibility.
+type MessageInfo struct {
+	Summary       string
+	Description   string
+	MessageSample interface{}
+}
+
+// ParameterInfo holds parameter metadata for AsyncAPI 3.0 channels.
+// Maintains the Schema map for backward compatibility with how parameters are used.
+type ParameterInfo struct {
+	Schema map[string]interface{}
+}
+
+// Operation represents a parsed AsyncAPI operation from Go comments.
+// Updated for AsyncAPI 3.0 compatibility.
 type Operation struct {
 	TypeOperation   string
 	Name            string
-	Message         *asyncapi.MessageSample
-	MessageResponse *asyncapi.MessageSample
-	Parameters      map[string]spec.Parameter
+	Message         *MessageInfo
+	MessageResponse *MessageInfo
+	Parameters      map[string]ParameterInfo
 }
 
 var paramsPattern = regexp.MustCompile("({(.+?)})")
@@ -34,9 +48,9 @@ var paramsPattern = regexp.MustCompile("({(.+?)})")
 func NewOperation() *Operation {
 	return &Operation{
 		TypeOperation:   "sub",
-		Message:         &asyncapi.MessageSample{},
-		MessageResponse: &asyncapi.MessageSample{},
-		Parameters:      map[string]spec.Parameter{},
+		Message:         &MessageInfo{},
+		MessageResponse: &MessageInfo{},
+		Parameters:      map[string]ParameterInfo{},
 	}
 }
 
@@ -74,7 +88,7 @@ func (operation *Operation) ParseName(name string) {
 	params := paramsPattern.FindAllStringSubmatch(name, -1)
 	for _, param := range params {
 		name := param[2]
-		operation.Parameters[name] = spec.Parameter{
+		operation.Parameters[name] = ParameterInfo{
 			Schema: map[string]interface{}{
 				"description": name,
 				"type":        "string",
