@@ -10,6 +10,23 @@
 
 AsyncAPI Generator is a code-to-spec tool that automatically generates AsyncAPI specifications from your Go code, similar to how [Swag](https://github.com/swaggo/swag) works for OpenAPI.
 
+## Table of Contents
+
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [AsyncAPI Annotations Reference](#asyncapi-annotations-reference)
+  - [Service-Level Annotations](#service-level-annotations)
+  - [Operation-Level Annotations](#operation-level-annotations)
+  - [Parameterized Channels](#parameterized-channels)
+  - [NATS Subject Patterns](#nats-subject-patterns)
+  - [Complete Example](#complete-example)
+  - [Supported Protocols](#supported-protocols)
+  - [Tips](#tips)
+- [Usage](#usage)
+  - [Generate Command](#generate-command)
+- [Examples](#examples)
+- [Generating Documentation and Code from AsyncAPI Spec](#generating-documentation-and-code-from-asyncapi-spec)
+
 ## Installation
 
 ### Using Go install (Recommended)
