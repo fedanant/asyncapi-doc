@@ -18,7 +18,6 @@ import (
 // @url nats://localhost:4222
 
 func main() {
-	// Connect to NATS server
 	nc, err := nats.Connect("nats://localhost:4222")
 	if err != nil {
 		log.Fatal("Failed to connect to NATS:", err)
@@ -27,17 +26,14 @@ func main() {
 
 	log.Println("Connected to NATS server at nats://localhost:4222")
 
-	// Create service instance
 	svc := &Service{nc: nc}
 
-	// Start subscribers
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	go svc.SubscribeToUserEvents(ctx)
 	go svc.SubscribeToOrderEvents(ctx)
 
-	// Publish some example messages
 	go func() {
 		time.Sleep(2 * time.Second)
 		svc.PublishUserCreated()
@@ -45,7 +41,6 @@ func main() {
 		svc.PublishOrderPlaced()
 	}()
 
-	// Wait for interrupt signal
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 	<-sigCh

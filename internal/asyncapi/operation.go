@@ -130,6 +130,15 @@ func GetByNameType(typeName string, astFile *ast.Package) interface{} {
 
 	refType := reflect2.TypeByName(typeName)
 
+	if refType == nil {
+		log.Printf("warning: type '%s' not found in runtime, using placeholder", typeName)
+		// Return a placeholder struct for types not available at runtime
+		if hasArray {
+			return []interface{}{}
+		}
+		return struct{}{}
+	}
+
 	if hasArray {
 		return reflect.MakeSlice(reflect.SliceOf(refType.Type1()), 0, 10).Interface()
 	} else {
