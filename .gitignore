@@ -36,8 +36,13 @@ Thumbs.db
 # Generated files
 output/
 *.log
+
+# Coverage files
+coverage/
 coverage.out
 coverage.html
+coverage.xml
+*.coverprofile
 
 # Linter cache
 .golangci-cache/
