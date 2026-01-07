@@ -22,6 +22,12 @@ func init() {
 func main() {
 	flag.Parse()
 
+	if len(os.Args) < 2 {
+		fmt.Fprintf(os.Stderr, "Error: command is required\n\n")
+		printUsage()
+		os.Exit(1)
+	}
+
 	command := os.Args[1]
 
 	switch command {
@@ -29,8 +35,6 @@ func main() {
 		generate()
 	case "version":
 		fmt.Printf("asyncapi-doc version %s\n", version)
-	case "help", "-h", "--help":
-		printUsage()
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %s\n\n", command)
 		printUsage()
@@ -40,15 +44,15 @@ func main() {
 
 func generate() {
 	fs := flag.NewFlagSet("generate", flag.ExitOnError)
-	output := fs.String("output", "./output", "output directory for generated files")
-	template := fs.String("template", "default", "template to use for generation")
-	verbose := fs.Bool("verbose", false, "verbose output")
+	output := fs.String("output", "./asyncapi.yaml", "output file for generated AsyncAPI specification")
+	verbose := fs.Bool("verbose", false, "enable verbose output")
 
 	fs.Parse(os.Args[2:])
 
 	if fs.NArg() < 1 {
-		fmt.Fprintf(os.Stderr, "Error: spec file is required\n")
-		fmt.Fprintf(os.Stderr, "Usage: asyncapi-doc generate [options] <spec-file>\n")
+		fmt.Fprintf(os.Stderr, "Error: source directory is required\n")
+		fmt.Fprintf(os.Stderr, "Usage: asyncapi-doc generate [options] <source-directory>\n\n")
+		fmt.Fprintf(os.Stderr, "Options:\n")
 		fs.PrintDefaults()
 		os.Exit(1)
 	}
@@ -56,19 +60,24 @@ func generate() {
 	codeFolder := fs.Arg(0)
 
 	if *verbose {
-		fmt.Printf("Generating from specification: %s\n", codeFolder)
-		fmt.Printf("Output directory: %s\n", *output)
-		fmt.Printf("Template: %s\n", *template)
+		fmt.Printf("Parsing source directory: %s\n", codeFolder)
+		fmt.Printf("Output file: %s\n", *output)
 	}
 
-	yaml, err := asyncapi.ParseFolder(codeFolder)
+	yaml, err := asyncapi.ParseFolder(codeFolder, *verbose)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalf("Failed to parse folder: %v\n", err)
 	}
 
-	os.WriteFile(*output, yaml, 0o600)
+	if *verbose {
+		fmt.Printf("Writing output to: %s\n", *output)
+	}
 
-	fmt.Println("✓ Code generation completed successfully!")
+	if err := os.WriteFile(*output, yaml, 0o600); err != nil {
+		log.Fatalf("Failed to write output file: %v\n", err)
+	}
+
+	fmt.Println("✓ AsyncAPI specification generated successfully!")
 }
 
 func printUsage() {

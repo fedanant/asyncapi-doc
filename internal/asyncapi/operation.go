@@ -1,6 +1,7 @@
 package asyncapi
 
 import (
+	"fmt"
 	"go/ast"
 	"log"
 	"reflect"
@@ -72,9 +73,13 @@ func (operation *Operation) ParseComment(comment string, astFile *ast.Package) e
 	case summaryAttr:
 		operation.ParseSummary(lineRemainder)
 	case payloadAttr:
-		operation.ParsePayload(lineRemainder, astFile)
+		if err := operation.ParsePayload(lineRemainder, astFile); err != nil {
+			log.Printf("Warning: %v", err)
+		}
 	case responseAttr:
-		operation.ParseResponse(lineRemainder, astFile)
+		if err := operation.ParseResponse(lineRemainder, astFile); err != nil {
+			log.Printf("Warning: %v", err)
+		}
 	}
 	return nil
 }
@@ -105,26 +110,26 @@ func (operation *Operation) ParseSummary(summary string) {
 	operation.Message.Summary = summary
 }
 
-func (operation *Operation) ParsePayload(name string, astFile *ast.Package) {
+func (operation *Operation) ParsePayload(name string, astFile *ast.Package) error {
 	typeSpec := GetByNameType(name, astFile)
 	if typeSpec != nil {
 		operation.Message.MessageSample = Msg{
 			Data: typeSpec,
 		}
-	} else {
-		log.Println("not found type payload", name)
+		return nil
 	}
+	return fmt.Errorf("payload type not found: %s", name)
 }
 
-func (operation *Operation) ParseResponse(name string, astFile *ast.Package) {
+func (operation *Operation) ParseResponse(name string, astFile *ast.Package) error {
 	typeSpec := GetByNameType(name, astFile)
 	if typeSpec != nil {
 		operation.MessageResponse.MessageSample = MsgResponse{
 			Response: typeSpec,
 		}
-	} else {
-		log.Println("not found type response", name)
+		return nil
 	}
+	return fmt.Errorf("response type not found: %s", name)
 }
 
 func GetByNameType(typeName string, astFile *ast.Package) interface{} {

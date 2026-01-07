@@ -31,4 +31,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Code of conduct
 - Examples and quick start guide
 
-[Unreleased]: https://github.com/fedanant/asyncapi-generator/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/fedanant/asyncapi-doc/compare/v0.1.0...HEAD

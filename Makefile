@@ -1,6 +1,6 @@
 .PHONY: build clean test fmt lint lint-install install run help
 
-BINARY_NAME=ag
+BINARY_NAME=asyncapi-doc
 BUILD_DIR=bin
 MAIN_PATH=./cmd/asyncapi-doc
 
@@ -16,6 +16,7 @@ build-all:
 	@echo "Building for multiple platforms..."
 	@mkdir -p $(BUILD_DIR)
 	@GOOS=linux GOARCH=amd64 go build -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64 $(MAIN_PATH)
+	@GOOS=linux GOARCH=arm64 go build -o $(BUILD_DIR)/$(BINARY_NAME)-linux-arm64 $(MAIN_PATH)
 	@GOOS=darwin GOARCH=amd64 go build -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-amd64 $(MAIN_PATH)
 	@GOOS=darwin GOARCH=arm64 go build -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-arm64 $(MAIN_PATH)
 	@GOOS=windows GOARCH=amd64 go build -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe $(MAIN_PATH)

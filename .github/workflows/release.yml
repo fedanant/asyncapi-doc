@@ -22,7 +22,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.24'
+        go-version: '1.23'
 
     - name: Run tests
       run: go test -v ./...
@@ -30,20 +30,11 @@ jobs:
     - name: Build binaries
       run: |
         # Build for multiple platforms
-        GOOS=linux GOARCH=amd64 go build -o bin/ag-linux-amd64 ./cmd/asyncapi-generator
-        GOOS=linux GOARCH=arm64 go build -o bin/ag-linux-arm64 ./cmd/asyncapi-generator
-        GOOS=darwin GOARCH=amd64 go build -o bin/ag-darwin-amd64 ./cmd/asyncapi-generator
-        GOOS=darwin GOARCH=arm64 go build -o bin/ag-darwin-arm64 ./cmd/asyncapi-generator
-        GOOS=windows GOARCH=amd64 go build -o bin/ag-windows-amd64.exe ./cmd/asyncapi-generator
-
-    - name: Create archives
-      run: |
-        cd bin
-        tar -czf ag-linux-amd64.tar.gz ag-linux-amd64
-        tar -czf ag-linux-arm64.tar.gz ag-linux-arm64
-        tar -czf ag-darwin-amd64.tar.gz ag-darwin-amd64
-        tar -czf ag-darwin-arm64.tar.gz ag-darwin-arm64
-        zip ag-windows-amd64.zip ag-windows-amd64.exe
+        GOOS=linux GOARCH=amd64 go build -o bin/asyncapi-doc-linux-amd64 ./cmd/asyncapi-doc
+        GOOS=linux GOARCH=arm64 go build -o bin/asyncapi-doc-linux-arm64 ./cmd/asyncapi-doc
+        GOOS=darwin GOARCH=amd64 go build -o bin/asyncapi-doc-darwin-amd64 ./cmd/asyncapi-doc
+        GOOS=darwin GOARCH=arm64 go build -o bin/asyncapi-doc-darwin-arm64 ./cmd/asyncapi-doc
+        GOOS=windows GOARCH=amd64 go build -o bin/asyncapi-doc-windows-amd64.exe ./cmd/asyncapi-doc
 
     - name: Generate changelog
       id: changelog
@@ -68,11 +59,11 @@ jobs:
       with:
         body: ${{ steps.changelog.outputs.changelog }}
         files: |
-          bin/ag-linux-amd64.tar.gz
-          bin/ag-linux-arm64.tar.gz
-          bin/ag-darwin-amd64.tar.gz
-          bin/ag-darwin-arm64.tar.gz
-          bin/ag-windows-amd64.zip
+          bin/asyncapi-doc-linux-amd64
+          bin/asyncapi-doc-linux-arm64
+          bin/asyncapi-doc-darwin-amd64
+          bin/asyncapi-doc-darwin-arm64
+          bin/asyncapi-doc-windows-amd64.exe
         draft: false
         prerelease: false
       env:

@@ -1,12 +1,12 @@
 # AsyncAPI Generator
 
-[![Go Version](https://img.shields.io/github/go-mod/go-version/fedanant/asyncapi-generator)](https://go.dev/doc/devel/release)
-[![CI](https://github.com/fedanant/asyncapi-generator/actions/workflows/ci.yml/badge.svg)](https://github.com/fedanant/asyncapi-generator/actions/workflows/ci.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/fedanant/asyncapi-generator)](https://goreportcard.com/report/github.com/fedanant/asyncapi-generator)
-[![codecov](https://codecov.io/gh/fedanant/asyncapi-generator/branch/main/graph/badge.svg)](https://codecov.io/gh/fedanant/asyncapi-generator)
-[![GoDoc](https://pkg.go.dev/badge/github.com/fedanant/asyncapi-generator)](https://pkg.go.dev/github.com/fedanant/asyncapi-generator)
-[![License](https://img.shields.io/github/license/fedanant/asyncapi-generator)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/fedanant/asyncapi-generator)](https://github.com/fedanant/asyncapi-generator/releases/latest)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/fedanant/asyncapi-doc)](https://go.dev/doc/devel/release)
+[![CI](https://github.com/fedanant/asyncapi-doc/actions/workflows/ci.yml/badge.svg)](https://github.com/fedanant/asyncapi-doc/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/fedanant/asyncapi-doc)](https://goreportcard.com/report/github.com/fedanant/asyncapi-doc)
+[![codecov](https://codecov.io/gh/fedanant/asyncapi-doc/branch/main/graph/badge.svg)](https://codecov.io/gh/fedanant/asyncapi-doc)
+[![GoDoc](https://pkg.go.dev/badge/github.com/fedanant/asyncapi-doc)](https://pkg.go.dev/github.com/fedanant/asyncapi-doc)
+[![License](https://img.shields.io/github/license/fedanant/asyncapi-doc)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/fedanant/asyncapi-doc)](https://github.com/fedanant/asyncapi-doc/releases/latest)
 
 AsyncAPI Generator is a code-to-spec tool that automatically generates AsyncAPI specifications from your Go code, similar to how [Swag](https://github.com/swaggo/swag) works for OpenAPI.
 
@@ -32,7 +32,7 @@ AsyncAPI Generator is a code-to-spec tool that automatically generates AsyncAPI 
 ### Using Go install (Recommended)
 
 ```bash
-go install github.com/fedanant/asyncapi-generator/cmd/asyncapi-generator@latest
+go install github.com/fedanant/asyncapi-doc/cmd/asyncapi-doc@latest
 ```
 
 ## Quick Start
@@ -101,8 +101,7 @@ type OrderPlacedEvent struct {
 ### 2. Generate AsyncAPI specification
 
 ```bash
-# Or use the shorthand binary name 'ag'
-ag generate -output ./asyncapi.yaml ./path/to/your/code
+asyncapi-doc generate -output ./asyncapi.yaml ./path/to/your/code
 ```
 
 ### 3. Generate HTML documentation (using AsyncAPI Generator)
@@ -419,7 +418,7 @@ The generator supports all AsyncAPI protocols:
 ### Available Commands
 
 ```
-asyncapi-generator <command> [options] [arguments]
+asyncapi-doc <command> [options] [arguments]
 ```
 
 #### Commands
@@ -431,7 +430,7 @@ asyncapi-generator <command> [options] [arguments]
 ### Generate Command
 
 ```bash
-asyncapi-generator generate [options] <source-directory>
+asyncapi-doc generate [options] <source-directory>
 ```
 
 #### Options

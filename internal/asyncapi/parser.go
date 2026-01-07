@@ -1,6 +1,7 @@
 package asyncapi
 
 import (
+	"fmt"
 	"go/ast"
 	"strings"
 
@@ -92,64 +93,78 @@ func (p *Parser) proccessOperation(operation *Operation) {
 		return
 	}
 
-	// Generate channel and operation names from the operation name
-	// e.g., "user.created" -> channelName: "userCreated", operationName: "userCreatedOp"
 	channelName := toChannelName(operation.Name)
 	messageName := channelName + "Message"
-	operationName := channelName
 
-	// Determine the action based on operation type
-	// In AsyncAPI 3.0: pub -> send, sub -> receive
-	var action spec3.OperationAction
-	switch operation.TypeOperation {
-	case "pub":
-		action = spec3.ActionSend
-		operationName = "publish" + strings.Title(channelName)
-	case "sub":
-		action = spec3.ActionReceive
-		operationName = "subscribe" + strings.Title(channelName)
-	case "request":
-		// Request type: send with reply configuration
-		action = spec3.ActionSend
-		operationName = "request" + strings.Title(channelName)
-	default:
-		// Default to receive (subscribe) for unknown types
-		action = spec3.ActionReceive
-		operationName = "subscribe" + strings.Title(channelName)
+	action, operationName := p.determineActionAndName(operation.TypeOperation, channelName)
+	channelParams := p.createChannelParameters(operation.Parameters)
+
+	// Create and register the message
+	p.createMessage(messageName, operation.Message)
+
+	// Create and register the channel
+	p.createChannel(channelName, operation.Name, messageName, channelParams)
+
+	// Create the operation
+	op := p.createOperation(action, channelName, messageName, operation.Message)
+
+	// Handle request-reply pattern
+	if operation.TypeOperation == "request" && operation.MessageResponse != nil && operation.MessageResponse.MessageSample != nil {
+		p.addReplyConfiguration(&op, channelName, operation, channelParams)
 	}
 
-	// Create the message in components
+	p.asyncApi.Operations[operationName] = op
+}
+
+// determineActionAndName returns the action and operation name based on operation type.
+func (p *Parser) determineActionAndName(opType string, channelName string) (spec3.OperationAction, string) {
+	switch opType {
+	case "pub":
+		return spec3.ActionSend, "publish" + strings.Title(channelName)
+	case "sub":
+		return spec3.ActionReceive, "subscribe" + strings.Title(channelName)
+	case "request":
+		return spec3.ActionSend, "request" + strings.Title(channelName)
+	default:
+		return spec3.ActionReceive, "subscribe" + strings.Title(channelName)
+	}
+}
+
+// createChannelParameters converts operation parameters to channel parameters.
+func (p *Parser) createChannelParameters(params map[string]ParameterInfo) map[string]spec3.Parameter {
+	channelParams := make(map[string]spec3.Parameter)
+	for paramName, param := range params {
+		channelParams[paramName] = spec3.Parameter{
+			Description: getSchemaDescription(param.Schema),
+		}
+	}
+	return channelParams
+}
+
+// createMessage creates and registers a message in the components section.
+func (p *Parser) createMessage(messageName string, msgInfo *MessageInfo) {
 	message := spec3.Message{
 		Name:        messageName,
-		Summary:     operation.Message.Summary,
-		Description: operation.Message.Description,
+		Summary:     msgInfo.Summary,
+		Description: msgInfo.Description,
 	}
 
-	// Set payload if available - create schema and use $ref
-	if operation.Message.MessageSample != nil {
+	if msgInfo.MessageSample != nil {
 		schemaName := messageName + "Payload"
-		schema := GenerateJSONSchema(operation.Message.MessageSample)
+		schema := GenerateJSONSchema(msgInfo.MessageSample)
 		p.asyncApi.Components.Schemas[schemaName] = schema
-
-		// Use $ref to reference the schema
 		message.Payload = map[string]interface{}{
 			"$ref": "#/components/schemas/" + schemaName,
 		}
 	}
 
 	p.asyncApi.Components.Messages[messageName] = message
+}
 
-	// Create channel parameters from operation parameters
-	channelParams := make(map[string]spec3.Parameter)
-	for paramName, param := range operation.Parameters {
-		channelParams[paramName] = spec3.Parameter{
-			Description: getSchemaDescription(param.Schema),
-		}
-	}
-
-	// Create the channel
+// createChannel creates and registers a channel.
+func (p *Parser) createChannel(channelName, address, messageName string, params map[string]spec3.Parameter) {
 	channel := spec3.Channel{
-		Address: operation.Name,
+		Address: address,
 		Messages: map[string]spec3.MessageRef{
 			messageName: {
 				Ref: "#/components/messages/" + messageName,
@@ -157,76 +172,48 @@ func (p *Parser) proccessOperation(operation *Operation) {
 		},
 	}
 
-	// Only add parameters if there are any
-	if len(channelParams) > 0 {
-		channel.Parameters = channelParams
+	if len(params) > 0 {
+		channel.Parameters = params
 	}
 
 	p.asyncApi.Channels[channelName] = channel
+}
 
-	// Create the operation
-	op := spec3.Operation{
+// createOperation creates an operation structure.
+func (p *Parser) createOperation(action spec3.OperationAction, channelName, messageName string, msgInfo *MessageInfo) spec3.Operation {
+	return spec3.Operation{
 		Action: action,
 		Channel: spec3.Reference{
 			Ref: "#/channels/" + channelName,
 		},
-		Summary:     operation.Message.Summary,
-		Description: operation.Message.Description,
+		Summary:     msgInfo.Summary,
+		Description: msgInfo.Description,
 		Messages: []spec3.Reference{
 			{Ref: "#/channels/" + channelName + "/messages/" + messageName},
 		},
 	}
+}
 
-	// Handle request type: add reply configuration
-	if operation.TypeOperation == "request" && operation.MessageResponse != nil && operation.MessageResponse.MessageSample != nil {
-		// Create reply channel and message names
-		replyChannelName := channelName + "Reply"
-		replyMessageName := replyChannelName + "Message"
+// addReplyConfiguration adds reply channel and message for request-reply pattern.
+func (p *Parser) addReplyConfiguration(op *spec3.Operation, channelName string, operation *Operation, channelParams map[string]spec3.Parameter) {
+	replyChannelName := channelName + "Reply"
+	replyMessageName := replyChannelName + "Message"
 
-		// Create the reply message in components - create schema and use $ref
-		replySchemaName := replyMessageName + "Payload"
-		replySchema := GenerateJSONSchema(operation.MessageResponse.MessageSample)
-		p.asyncApi.Components.Schemas[replySchemaName] = replySchema
+	// Create and register reply message
+	p.createMessage(replyMessageName, operation.MessageResponse)
 
-		replyMessage := spec3.Message{
-			Name:        replyMessageName,
-			Summary:     operation.MessageResponse.Summary,
-			Description: operation.MessageResponse.Description,
-			Payload: map[string]interface{}{
-				"$ref": "#/components/schemas/" + replySchemaName,
-			},
-		}
-		p.asyncApi.Components.Messages[replyMessageName] = replyMessage
+	// Create and register reply channel
+	p.createChannel(replyChannelName, operation.Name+"/reply", replyMessageName, channelParams)
 
-		// Create the reply channel
-		replyChannel := spec3.Channel{
-			Address: operation.Name + "/reply",
-			Messages: map[string]spec3.MessageRef{
-				replyMessageName: {
-					Ref: "#/components/messages/" + replyMessageName,
-				},
-			},
-		}
-
-		// Add parameters to reply channel if the original channel has them
-		if len(channelParams) > 0 {
-			replyChannel.Parameters = channelParams
-		}
-
-		p.asyncApi.Channels[replyChannelName] = replyChannel
-
-		// Set the reply configuration on the operation
-		op.Reply = &spec3.OperationReply{
-			Channel: &spec3.Reference{
-				Ref: "#/channels/" + replyChannelName,
-			},
-			Messages: []spec3.Reference{
-				{Ref: "#/channels/" + replyChannelName + "/messages/" + replyMessageName},
-			},
-		}
+	// Set reply configuration on operation
+	op.Reply = &spec3.OperationReply{
+		Channel: &spec3.Reference{
+			Ref: "#/channels/" + replyChannelName,
+		},
+		Messages: []spec3.Reference{
+			{Ref: "#/channels/" + replyChannelName + "/messages/" + replyMessageName},
+		},
 	}
-
-	p.asyncApi.Operations[operationName] = op
 }
 
 // toChannelName converts a channel address to a valid channel name.
@@ -270,6 +257,20 @@ func getSchemaDescription(schema map[string]interface{}) string {
 		return desc
 	}
 	return ""
+}
+
+// Validate checks that the parser has collected required API information.
+func (p *Parser) Validate() error {
+	if p.asyncApi.Info.Title == "" {
+		return fmt.Errorf("missing required @title annotation in API comments")
+	}
+	if p.asyncApi.Info.Version == "" {
+		return fmt.Errorf("missing required @version annotation in API comments")
+	}
+	if len(p.asyncApi.Servers) == 0 {
+		return fmt.Errorf("missing required server configuration (@url or @host and @protocol)")
+	}
+	return nil
 }
 
 // MarshalYAML serializes the AsyncAPI 3.0 document to YAML format.

@@ -20,7 +20,7 @@ vendor/
 # Build output
 bin/
 dist/
-asyncapi-generator
+asyncapi-doc
 
 # IDE specific files
 .idea/
@@ -50,3 +50,4 @@ coverage.html
 .claude/
 .auto-claude/
 .claude_settings.json
+.actrc

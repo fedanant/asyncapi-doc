@@ -1,6 +1,6 @@
 # NATS AsyncAPI Example
 
-This example demonstrates how to use the asyncapi-generator tool with a NATS-based messaging application.
+This example demonstrates how to use the asyncapi-doc tool with a NATS-based messaging application.
 
 ## Overview
 
@@ -28,7 +28,7 @@ nats-server
 
 2. **Go**: Go 1.24 or later
 
-3. **asyncapi-generator**: Built from the parent project
+3. **asyncapi-doc**: Built from the parent project
 
 ```bash
 cd ../..
@@ -70,7 +70,7 @@ To generate the AsyncAPI specification from this example:
 
 ```bash
 # From the project root
-./bin/ag generate -output ./example/nats/asyncapi.yaml ./example/nats
+./bin/asyncapi-doc generate -output ./example/nats/asyncapi.yaml ./example/nats
 ```
 
 This will analyze the Go code annotations and generate an AsyncAPI 2.4.0 specification file.
