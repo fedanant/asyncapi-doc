@@ -1,8 +1,8 @@
 # Generated AsyncAPI spec
 asyncapi.yaml
 
-# Binary
-nats-example
+# Binaries
+bin/
 
 # Go test coverage
 coverage.out

@@ -9,6 +9,7 @@ import (
 )
 
 func listPackages(dir string, env []string, args ...string) (pkgs []*build.Package, finalErr error) {
+	//nolint:gosec // Command arguments are controlled and validated by the caller
 	cmd := exec.Command("go", append([]string{"list", "-json", "-e"}, args...)...)
 	cmd.Env = env
 	cmd.Dir = dir

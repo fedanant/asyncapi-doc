@@ -14,11 +14,29 @@ import (
 
 // @title NATS Message Service
 // @version 1.0.0
+// @description A comprehensive NATS-based message service for handling user and order events
+// @termsOfService https://example.com/terms
+// @contact.name NATS Service Team
+// @contact.email nats-support@example.com
+// @contact.url https://example.com/nats-support
+// @license.name Apache 2.0
+// @license.url https://www.apache.org/licenses/LICENSE-2.0.html
+// @tag users - User management events
+// @tag orders - Order processing events
+// @externalDocs.description NATS Service Documentation
+// @externalDocs.url https://docs.example.com/nats-service
 // @protocol nats
+// @protocolVersion 2.9
 // @url nats://localhost:4222
+// @server.title Development NATS Server
+// @server.summary Local development message broker
+// @server.description NATS server running locally for development and testing
+// @server.tag development - Development environment
+// @server.tag local - Local deployment
+// @server.externalDocs.description NATS server setup guide
+// @server.externalDocs.url https://docs.nats.io/running-a-nats-service/introduction
 
 func main() {
-	// Connect to NATS server
 	nc, err := nats.Connect("nats://localhost:4222")
 	if err != nil {
 		log.Fatal("Failed to connect to NATS:", err)
@@ -27,25 +45,24 @@ func main() {
 
 	log.Println("Connected to NATS server at nats://localhost:4222")
 
-	// Create service instance
 	svc := &Service{nc: nc}
 
-	// Start subscribers
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	go svc.SubscribeToUserEvents(ctx)
 	go svc.SubscribeToOrderEvents(ctx)
+	go svc.SubscribeToGetUser(ctx)
 
-	// Publish some example messages
 	go func() {
 		time.Sleep(2 * time.Second)
 		svc.PublishUserCreated()
 		time.Sleep(1 * time.Second)
 		svc.PublishOrderPlaced()
+		time.Sleep(1 * time.Second)
+		svc.RequestGetUser("user-123")
 	}()
 
-	// Wait for interrupt signal
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 	<-sigCh
@@ -165,6 +182,81 @@ func (s *Service) SubscribeToOrderEvents(ctx context.Context) {
 
 	if err != nil {
 		log.Fatal("Failed to subscribe to order.*.shipped:", err)
+	}
+
+	<-ctx.Done()
+	sub.Unsubscribe()
+}
+
+// RequestGetUser sends a request to get user details and waits for a response
+// @type request
+// @name user.get
+// @summary Get User Request
+// @description Sends a request to retrieve user details by ID and waits for response
+// @payload GetUserRequest
+// @response GetUserResponse
+func (s *Service) RequestGetUser(userID string) (*GetUserResponse, error) {
+	request := GetUserRequest{
+		UserID: userID,
+	}
+
+	data, err := json.Marshal(request)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Printf("Sending user.get request: %s", data)
+	msg, err := s.nc.Request("user.get", data, 5*time.Second)
+	if err != nil {
+		log.Printf("Error sending user.get request: %v", err)
+		return nil, err
+	}
+
+	var response GetUserResponse
+	if err := json.Unmarshal(msg.Data, &response); err != nil {
+		log.Printf("Error unmarshaling user.get response: %v", err)
+		return nil, err
+	}
+
+	log.Printf("Received user.get response: UserID=%s, Email=%s, Found=%v",
+		response.UserID, response.Email, response.Found)
+	return &response, nil
+}
+
+// SubscribeToGetUser subscribes to user.get requests and responds with user details
+// @type sub
+// @name user.get
+// @summary Get User Handler
+// @description Handles requests to retrieve user details
+// @payload GetUserRequest
+// @response GetUserResponse
+func (s *Service) SubscribeToGetUser(ctx context.Context) {
+	sub, err := s.nc.Subscribe("user.get", func(msg *nats.Msg) {
+		var request GetUserRequest
+		if err := json.Unmarshal(msg.Data, &request); err != nil {
+			log.Printf("Error unmarshaling user.get request: %v", err)
+			return
+		}
+
+		log.Printf("Received user.get request: UserID=%s", request.UserID)
+
+		// Simulate looking up user details
+		response := GetUserResponse{
+			UserID:    request.UserID,
+			Email:     "john.doe@example.com",
+			Username:  "johndoe",
+			CreatedAt: time.Now(),
+			Found:     true,
+		}
+
+		if msg.Reply != "" {
+			respData, _ := json.Marshal(response)
+			msg.Respond(respData)
+		}
+	})
+
+	if err != nil {
+		log.Fatal("Failed to subscribe to user.get:", err)
 	}
 
 	<-ctx.Done()

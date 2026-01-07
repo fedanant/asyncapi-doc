@@ -20,7 +20,6 @@ vendor/
 # Build output
 bin/
 dist/
-asyncapi-generator
 
 # IDE specific files
 .idea/
@@ -37,6 +36,22 @@ Thumbs.db
 output/
 *.log
 
+# Coverage files
+coverage/
+coverage.out
+coverage.html
+coverage.xml
+*.coverprofile
+
+# Linter cache
+.golangci-cache/
+
 # Config files (may contain sensitive data)
 *.local.json
 .env
+
+.worktrees/
+.claude/
+.auto-claude/
+.claude_settings.json
+.actrc

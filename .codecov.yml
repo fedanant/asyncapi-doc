@@ -1,0 +1,86 @@
+codecov:
+  require_ci_to_pass: yes
+  notify:
+    wait_for_ci: yes
+
+coverage:
+  precision: 2
+  round: down
+  range: "60...100"
+
+  status:
+    project:
+      default:
+        target: 70%
+        threshold: 2%
+        if_ci_failed: error
+        if_not_found: success
+        informational: false
+        only_pulls: false
+
+    patch:
+      default:
+        target: 70%
+        threshold: 2%
+        if_ci_failed: error
+        if_not_found: success
+        only_pulls: true
+
+    changes:
+      default:
+        if_ci_failed: error
+        if_not_found: success
+        informational: false
+
+comment:
+  layout: "header,diff,flags,components,tree,footer"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: true
+  branches:
+    - main
+    - develop
+
+github_checks:
+  annotations: true
+
+ignore:
+  - "**/*_test.go"
+  - "**/testdata/**"
+  - "example/**"
+  - "cmd/**"
+  - "**/*.pb.go"
+  - "**/mock_*.go"
+  - "**/mocks/**"
+
+component_management:
+  individual_components:
+    - component_id: asyncapi
+      name: AsyncAPI Core
+      paths:
+        - internal/asyncapi/**
+    - component_id: parser
+      name: Parser
+      paths:
+        - internal/asyncapi/parser.go
+        - internal/asyncapi/operation.go
+    - component_id: types
+      name: Type System
+      paths:
+        - internal/asyncapi/type_checker.go
+        - internal/asyncapi/ast_types.go
+    - component_id: schema
+      name: Schema Generation
+      paths:
+        - internal/asyncapi/schema.go
+    - component_id: spec
+      name: AsyncAPI Spec
+      paths:
+        - internal/asyncapi/spec3/**
+
+flags:
+  unittests:
+    paths:
+      - internal/
+    carryforward: true

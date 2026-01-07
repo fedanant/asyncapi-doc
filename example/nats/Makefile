@@ -1,9 +1,19 @@
-.PHONY: run generate clean deps nats-start nats-stop help
+.PHONY: build run generate clean deps nats-start nats-stop help
+
+BINARY_NAME=nats-example
+BUILD_DIR=bin
+
+# Build the example application
+build:
+	@echo "Building $(BINARY_NAME)..."
+	@mkdir -p $(BUILD_DIR)
+	@go build -o $(BUILD_DIR)/$(BINARY_NAME) .
+	@echo "✓ Build complete: $(BUILD_DIR)/$(BINARY_NAME)"
 
 # Run the example application
-run:
+run: build
 	@echo "Starting NATS example application..."
-	@go run .
+	@./$(BUILD_DIR)/$(BINARY_NAME)
 
 # Generate AsyncAPI specification
 generate:
@@ -35,5 +45,25 @@ nats-stop:
 # Clean generated files
 clean:
 	@echo "Cleaning generated files..."
+	@rm -rf $(BUILD_DIR)
 	@rm -f asyncapi.yaml
 	@echo "✓ Clean complete"
+
+# Show help
+help:
+	@echo "NATS AsyncAPI Example - Available Commands:"
+	@echo ""
+	@echo "  make build       - Build the example application"
+	@echo "  make deps        - Install Go dependencies"
+	@echo "  make nats-start  - Start NATS server in Docker"
+	@echo "  make run         - Build and run the example application"
+	@echo "  make generate    - Generate AsyncAPI specification"
+	@echo "  make nats-stop   - Stop NATS server"
+	@echo "  make clean       - Remove generated files and binaries"
+	@echo "  make help        - Show this help message"
+	@echo ""
+	@echo "Quick start:"
+	@echo "  1. make nats-start"
+	@echo "  2. make deps"
+	@echo "  3. make run"
+	@echo "  4. make generate"

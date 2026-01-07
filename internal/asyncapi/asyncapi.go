@@ -1,10 +1,10 @@
 package asyncapi
 
 import (
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -16,16 +16,17 @@ type file struct {
 	name string
 }
 
-func sortedFiles(pkg *ast.Package) []file {
-	files := make([]file, 0, len(pkg.Files))
+func sortedFiles(files []*ast.File, fileNames map[*ast.File]string) []file {
+	result := make([]file, 0, len(files))
 
-	for name, f := range pkg.Files {
-		files = append(files, file{file: f, name: filepath.Base(name)})
+	for _, f := range files {
+		name := filepath.Base(fileNames[f])
+		result = append(result, file{file: f, name: name})
 	}
 
 	// Sort files in lexicographic order, except give priority to main.go
-	sort.Slice(files, func(i, j int) bool {
-		ni, nj := files[i].name, files[j].name
+	sort.Slice(result, func(i, j int) bool {
+		ni, nj := result[i].name, result[j].name
 		if ni == "main.go" {
 			return true
 		}
@@ -37,7 +38,7 @@ func sortedFiles(pkg *ast.Package) []file {
 		return ni < nj
 	})
 
-	return files
+	return result
 }
 
 func extractComment(cgrp *ast.CommentGroup) []string {
@@ -46,16 +47,14 @@ func extractComment(cgrp *ast.CommentGroup) []string {
 	return comments
 }
 
-func parseComments(p *Parser, pkg *ast.Package) {
-	files := sortedFiles(pkg)
-
+func parseComments(p *Parser, files []file, tc *TypeChecker) {
 	for _, f := range files {
 		for _, c := range f.file.Comments {
 			comments := extractComment(c)
 			if isGeneralAPIComment(comments) {
 				p.ParseMain(comments)
 			} else {
-				p.ParseOperation(comments, pkg)
+				p.ParseOperation(comments, tc)
 			}
 		}
 	}
@@ -65,69 +64,147 @@ func isGeneralAPIComment(comments []string) bool {
 	for _, commentLine := range comments {
 		attribute := strings.ToLower(strings.Split(commentLine, " ")[0])
 		switch attribute {
-		// The @url annotation belongs to Operation
-		case urlAttr:
+		case titleAttr, versionAttr, protocolAttr, urlAttr, hostAttr:
 			return true
 		}
 	}
 	return false
 }
 
-func ParseFolder(srcDir string) ([]byte, error) {
+//nolint:gocyclo // Complex folder parsing logic is intentionally centralized
+func ParseFolder(srcDir string, verbose bool) ([]byte, error) {
+	// Validate that the source directory exists
+	if _, err := os.Stat(srcDir); os.IsNotExist(err) {
+		return nil, fmt.Errorf("source directory does not exist: %s", srcDir)
+	}
+
 	pathExec, err := os.Getwd()
 	if err != nil {
-		log.Panicln(err)
+		return nil, fmt.Errorf("failed to get working directory: %w", err)
 	}
 	fset := token.NewFileSet()
 
-	pkgs := map[string]*ast.Package{}
-	pkgsMain, err := parser.ParseDir(fset, srcDir, nil, parser.ParseComments)
+	// Parse all files in the directory
+	pkgs, err := parser.ParseDir(fset, srcDir, nil, parser.ParseComments)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("failed to parse directory %s: %w", srcDir, err)
 	}
 
-	for key, v := range pkgsMain {
-		pkgs[key] = v
+	// Collect all type checkers by package
+	typeCheckers := make(map[string]*TypeChecker)
+
+	for pkgName, pkg := range pkgs {
+		// Convert ast.Package to []*ast.File
+		var files []*ast.File
+		for _, f := range pkg.Files {
+			files = append(files, f)
+		}
+
+		tc, err := NewTypeChecker(fset, files, pkgName)
+		if err != nil {
+			if verbose {
+				fmt.Printf("Warning: failed to create type checker for package %s: %v\n", pkgName, err)
+			}
+			continue
+		}
+		typeCheckers[pkgName] = tc
 	}
 
+	// Parse additional dependency packages
 	packagesFile, err := listPackages(srcDir, nil, "-deps")
-
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("failed to list packages: %w", err)
 	}
 
-	for _, pkg := range packagesFile {
-		filename := pkg.Dir
-		if strings.HasPrefix(filename, pathExec) && pkgs[filename] == nil {
+	for _, pkgInfo := range packagesFile {
+		filename := pkgInfo.Dir
+		if strings.HasPrefix(filename, pathExec) && typeCheckers[pkgInfo.Name] == nil {
 			packages, err := parser.ParseDir(fset, filename, nil, parser.ParseComments)
 			if err != nil {
-				log.Panicln(err)
+				if verbose {
+					fmt.Printf("Warning: failed to parse package directory %s: %v\n", filename, err)
+				}
+				continue
 			}
-			for _, pack := range packages {
-				pkgs[filename] = pack
+
+			for pkgName, pkg := range packages {
+				var files []*ast.File
+				for _, f := range pkg.Files {
+					files = append(files, f)
+				}
+
+				tc, err := NewTypeChecker(fset, files, pkgName)
+				if err != nil {
+					if verbose {
+						fmt.Printf("Warning: failed to create type checker for package %s: %v\n", pkgName, err)
+					}
+					continue
+				}
+				typeCheckers[pkgName] = tc
 			}
 		}
 	}
 
 	p := NewParser()
 
-	for _, pkg := range pkgs {
-		parseComments(p, pkg)
+	if verbose {
+		fmt.Printf("Parsing %d package(s)...\n", len(pkgs))
+	}
+
+	// Parse comments from main packages
+	for pkgName, pkg := range pkgs {
+		if verbose {
+			fmt.Printf("  - Parsing package: %s\n", pkgName)
+		}
+
+		tc := typeCheckers[pkgName]
+		if tc == nil {
+			if verbose {
+				fmt.Printf("Warning: no type checker for package %s\n", pkgName)
+			}
+			continue
+		}
+
+		// Create file list with names
+		var files []*ast.File
+		fileNames := make(map[*ast.File]string)
+		for name, f := range pkg.Files {
+			files = append(files, f)
+			fileNames[f] = name
+		}
+
+		sortedFileList := sortedFiles(files, fileNames)
+		parseComments(p, sortedFileList, tc)
+	}
+
+	// Validate that we found required API information
+	if err := p.Validate(); err != nil {
+		return nil, fmt.Errorf("validation failed: %w", err)
 	}
 
 	yaml, err := p.MarshalYAML()
 	if err != nil {
-		log.Fatalln(err)
+		return nil, fmt.Errorf("failed to marshal YAML: %w", err)
 	}
 
-	return yaml, err
+	if verbose {
+		fmt.Printf("Generated %d channel(s) and %d operation(s)\n",
+			len(p.asyncAPI.Channels), len(p.asyncAPI.Operations))
+	}
+
+	return yaml, nil
 }
 
-func Gen(filename string, outFile string) {
+func Gen(filename, outFile string) error {
 	srcDir := filepath.Dir(filename)
-	yaml, err := ParseFolder(srcDir)
+	yaml, err := ParseFolder(srcDir, false)
 	if err != nil {
-		log.Fatalln(err)
+		return fmt.Errorf("failed to parse folder: %w", err)
 	}
-	os.WriteFile(outFile, yaml, 0o600)
+
+	if err := os.WriteFile(outFile, yaml, 0o600); err != nil {
+		return fmt.Errorf("failed to write output file: %w", err)
+	}
+
+	return nil
 }
