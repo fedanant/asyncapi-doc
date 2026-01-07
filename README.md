@@ -173,7 +173,57 @@ func main() {
 | `@externalDocs.description` | Description for external documentation | No | `@externalDocs.description Additional API documentation` |
 | `@externalDocs.url` | URL to external documentation | No | `@externalDocs.url https://docs.example.com/api` |
 | `@protocol` | Message protocol | Yes | `@protocol nats`, `@protocol amqp`, `@protocol mqtt` |
-| `@url` | Server URL | Yes | `@url nats://localhost:4222` |
+| `@protocolVersion` | Protocol version used for the connection | No | `@protocolVersion 1.0` |
+| `@pathname` | Path to a resource in the host | No | `@pathname /api/events` |
+| `@url` | Server URL (can be `@host` or `@url`) | Yes | `@url nats://localhost:4222` |
+| `@host` | Server hostname (may include port) | Yes | `@host localhost:4222` |
+| `@server.title` | Human-friendly title for the server | No | `@server.title Production NATS Server` |
+| `@server.summary` | Brief overview of the server | No | `@server.summary Main production message broker` |
+| `@server.description` | Description of the server | No | `@server.description Production NATS server for event streaming` |
+| `@server.tag` | Keywords to logically group servers (can be used multiple times) | No | `@server.tag production - Production environment` |
+| `@server.externalDocs.description` | Description for server external documentation | No | `@server.externalDocs.description Server setup guide` |
+| `@server.externalDocs.url` | URL to server external documentation | No | `@server.externalDocs.url https://docs.example.com/nats` |
+
+### Server Annotations
+
+Server annotations allow you to provide detailed information about your message broker servers. These annotations enrich your AsyncAPI specification with metadata that helps consumers understand your server infrastructure.
+
+#### Basic Server Configuration
+
+```go
+// @protocol nats
+// @url nats://localhost:4222
+```
+
+#### Full Server Configuration Example
+
+```go
+// @protocol nats
+// @protocolVersion 2.9
+// @pathname /events
+// @url nats://localhost:4222
+// @server.title Production NATS Cluster
+// @server.summary Main production message broker
+// @server.description High-availability NATS cluster for production event streaming
+// @server.tag production - Production environment
+// @server.tag high-availability - HA cluster configuration
+// @server.externalDocs.description NATS cluster setup and maintenance guide
+// @server.externalDocs.url https://docs.example.com/nats/production-setup
+```
+
+#### Server Properties Reference
+
+| Property | Annotation | Description | Example |
+|----------|-----------|-------------|---------|
+| Host | `@url` or `@host` | Server hostname with optional port | `@url nats://localhost:4222` |
+| Protocol | `@protocol` | Messaging protocol | `@protocol nats` |
+| Protocol Version | `@protocolVersion` | Version of the protocol | `@protocolVersion 2.9` |
+| Pathname | `@pathname` | Path to resource in the host | `@pathname /api/events` |
+| Title | `@server.title` | Human-friendly server title | `@server.title Production Server` |
+| Summary | `@server.summary` | Brief server overview | `@server.summary Main message broker` |
+| Description | `@server.description` | Detailed server description | `@server.description Production NATS cluster` |
+| Tags | `@server.tag` | Keywords for logical grouping | `@server.tag production - Prod env` |
+| External Docs | `@server.externalDocs.*` | Link to external documentation | See example above |
 
 ### Operation-Level Annotations
 
@@ -370,7 +420,14 @@ import (
 // @externalDocs.description E-Commerce API Documentation
 // @externalDocs.url https://docs.ecommerce.example.com
 // @protocol amqp
+// @protocolVersion 0.9.1
 // @url amqp://localhost:5672
+// @server.title Production RabbitMQ Server
+// @server.summary Main production message broker
+// @server.description High-availability RabbitMQ cluster for production e-commerce events
+// @server.tag production - Production environment
+// @server.externalDocs.description RabbitMQ server documentation
+// @server.externalDocs.url https://docs.ecommerce.example.com/rabbitmq
 
 func main() {
     svc := &EventService{}

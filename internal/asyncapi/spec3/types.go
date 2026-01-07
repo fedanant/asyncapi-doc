@@ -59,16 +59,18 @@ type License struct {
 // Server represents a server object in AsyncAPI 3.0.
 // In 3.0, 'url' is replaced with 'host' and optional 'pathname'.
 type Server struct {
-	Host        string                 `json:"host" yaml:"host"`
-	Protocol    string                 `json:"protocol" yaml:"protocol"`
-	Pathname    string                 `json:"pathname,omitempty" yaml:"pathname,omitempty"`
-	Description string                 `json:"description,omitempty" yaml:"description,omitempty"`
-	Title       string                 `json:"title,omitempty" yaml:"title,omitempty"`
-	Summary     string                 `json:"summary,omitempty" yaml:"summary,omitempty"`
-	Variables   map[string]ServerVar   `json:"variables,omitempty" yaml:"variables,omitempty"`
-	Security    []map[string][]string  `json:"security,omitempty" yaml:"security,omitempty"`
-	Tags        []Tag                  `json:"tags,omitempty" yaml:"tags,omitempty"`
-	Bindings    map[string]interface{} `json:"bindings,omitempty" yaml:"bindings,omitempty"`
+	Host            string                 `json:"host" yaml:"host"`
+	Protocol        string                 `json:"protocol" yaml:"protocol"`
+	ProtocolVersion string                 `json:"protocolVersion,omitempty" yaml:"protocolVersion,omitempty"`
+	Pathname        string                 `json:"pathname,omitempty" yaml:"pathname,omitempty"`
+	Description     string                 `json:"description,omitempty" yaml:"description,omitempty"`
+	Title           string                 `json:"title,omitempty" yaml:"title,omitempty"`
+	Summary         string                 `json:"summary,omitempty" yaml:"summary,omitempty"`
+	Variables       map[string]ServerVar   `json:"variables,omitempty" yaml:"variables,omitempty"`
+	Security        []map[string][]string  `json:"security,omitempty" yaml:"security,omitempty"`
+	Tags            []Tag                  `json:"tags,omitempty" yaml:"tags,omitempty"`
+	ExternalDocs    *ExternalDocs          `json:"externalDocs,omitempty" yaml:"externalDocs,omitempty"`
+	Bindings        map[string]interface{} `json:"bindings,omitempty" yaml:"bindings,omitempty"`
 }
 
 // ServerVar represents a server variable for server URL template substitution.

@@ -9,26 +9,34 @@ import (
 )
 
 const (
-	titleAttr            = "@title"
-	urlAttr              = "@url"
-	hostAttr             = "@host"
-	versionAttr          = "@version"
-	typeAttr             = "@type"
-	nameAttr             = "@name"
-	protocolAttr         = "@protocol"
-	descriptionAttr      = "@description"
-	summaryAttr          = "@summary"
-	payloadAttr          = "@payload"
-	responseAttr         = "@response"
-	termsOfServiceAttr   = "@termsofservice"
-	contactNameAttr      = "@contact.name"
-	contactURLAttr       = "@contact.url"
-	contactEmailAttr     = "@contact.email"
-	licenseNameAttr      = "@license.name"
-	licenseURLAttr       = "@license.url"
-	tagAttr              = "@tag"
-	externalDocsDescAttr = "@externaldocs.description"
-	externalDocsURLAttr  = "@externaldocs.url"
+	titleAttr              = "@title"
+	urlAttr                = "@url"
+	hostAttr               = "@host"
+	versionAttr            = "@version"
+	typeAttr               = "@type"
+	nameAttr               = "@name"
+	protocolAttr           = "@protocol"
+	protocolVersionAttr    = "@protocolversion"
+	pathnameAttr           = "@pathname"
+	descriptionAttr        = "@description"
+	summaryAttr            = "@summary"
+	payloadAttr            = "@payload"
+	responseAttr           = "@response"
+	termsOfServiceAttr     = "@termsofservice"
+	contactNameAttr        = "@contact.name"
+	contactURLAttr         = "@contact.url"
+	contactEmailAttr       = "@contact.email"
+	licenseNameAttr        = "@license.name"
+	licenseURLAttr         = "@license.url"
+	tagAttr                = "@tag"
+	externalDocsDescAttr   = "@externaldocs.description"
+	externalDocsURLAttr    = "@externaldocs.url"
+	serverTitleAttr        = "@server.title"
+	serverSummaryAttr      = "@server.summary"
+	serverDescriptionAttr  = "@server.description"
+	serverTagAttr          = "@server.tag"
+	serverExternalDocsDesc = "@server.externaldocs.description"
+	serverExternalDocsURL  = "@server.externaldocs.url"
 )
 
 // Parser parses Go source comments and generates AsyncAPI 3.0 specifications.
@@ -47,9 +55,16 @@ func NewParser() *Parser {
 // In AsyncAPI 3.0, servers use 'host' instead of 'url'.
 func (p *Parser) ParseMain(comments []string) {
 	var protocol string
+	var protocolVersion string
+	var pathname string
 	var serverName string
 	var tags []spec3.Tag
 	var externalDocs *spec3.ExternalDocs
+	var serverTags []spec3.Tag
+	var serverExternalDocs *spec3.ExternalDocs
+	var serverTitle string
+	var serverSummary string
+	var serverDescription string
 
 	for i := range comments {
 		commentLine := comments[i]
@@ -114,6 +129,34 @@ func (p *Parser) ParseMain(comments []string) {
 			externalDocs.URL = value
 		case protocolAttr:
 			protocol = value
+		case protocolVersionAttr:
+			protocolVersion = value
+		case pathnameAttr:
+			pathname = value
+		case serverTitleAttr:
+			serverTitle = value
+		case serverSummaryAttr:
+			serverSummary = value
+		case serverDescriptionAttr:
+			serverDescription = value
+		case serverTagAttr:
+			// Parse tag in format: "name - description" or just "name"
+			tagParts := strings.SplitN(value, " - ", 2)
+			tag := spec3.Tag{Name: strings.TrimSpace(tagParts[0])}
+			if len(tagParts) > 1 {
+				tag.Description = strings.TrimSpace(tagParts[1])
+			}
+			serverTags = append(serverTags, tag)
+		case serverExternalDocsDesc:
+			if serverExternalDocs == nil {
+				serverExternalDocs = &spec3.ExternalDocs{}
+			}
+			serverExternalDocs.Description = value
+		case serverExternalDocsURL:
+			if serverExternalDocs == nil {
+				serverExternalDocs = &spec3.ExternalDocs{}
+			}
+			serverExternalDocs.URL = value
 		case urlAttr, hostAttr:
 			// AsyncAPI 3.0 uses 'host' instead of 'url'
 			// Support both @url and @host for backward compatibility
@@ -125,10 +168,25 @@ func (p *Parser) ParseMain(comments []string) {
 			if idx := strings.Index(host, "://"); idx != -1 {
 				host = host[idx+3:]
 			}
-			p.asyncApi.Servers[serverName] = spec3.Server{
-				Host:     host,
-				Protocol: protocol,
+
+			server := spec3.Server{
+				Host:            host,
+				Protocol:        protocol,
+				ProtocolVersion: protocolVersion,
+				Pathname:        pathname,
+				Title:           serverTitle,
+				Summary:         serverSummary,
+				Description:     serverDescription,
 			}
+
+			if len(serverTags) > 0 {
+				server.Tags = serverTags
+			}
+			if serverExternalDocs != nil && serverExternalDocs.URL != "" {
+				server.ExternalDocs = serverExternalDocs
+			}
+
+			p.asyncApi.Servers[serverName] = server
 		}
 	}
 

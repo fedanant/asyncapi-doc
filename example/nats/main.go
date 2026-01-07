@@ -26,7 +26,15 @@ import (
 // @externalDocs.description NATS Service Documentation
 // @externalDocs.url https://docs.example.com/nats-service
 // @protocol nats
+// @protocolVersion 2.9
 // @url nats://localhost:4222
+// @server.title Development NATS Server
+// @server.summary Local development message broker
+// @server.description NATS server running locally for development and testing
+// @server.tag development - Development environment
+// @server.tag local - Local deployment
+// @server.externalDocs.description NATS server setup guide
+// @server.externalDocs.url https://docs.nats.io/running-a-nats-service/introduction
 
 func main() {
 	nc, err := nats.Connect("nats://localhost:4222")
