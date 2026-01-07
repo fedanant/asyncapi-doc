@@ -1,4 +1,4 @@
-module github.com/fedanant/asyncapi-generator
+module github.com/fedanant/asyncapi-doc
 
 go 1.24.0
 

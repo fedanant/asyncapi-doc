@@ -2,7 +2,7 @@
 
 BINARY_NAME=ag
 BUILD_DIR=bin
-MAIN_PATH=./cmd/asyncapi-generator
+MAIN_PATH=./cmd/asyncapi-doc
 
 # Build the application
 build:

@@ -4,7 +4,7 @@ import (
 	"go/ast"
 	"strings"
 
-	"github.com/fedanant/asyncapi-generator/internal/asyncapi/spec3"
+	"github.com/fedanant/asyncapi-doc/internal/asyncapi/spec3"
 )
 
 const (

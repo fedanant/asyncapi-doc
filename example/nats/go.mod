@@ -1,4 +1,4 @@
-module github.com/fedanant/asyncapi-generator/example/nats
+module github.com/fedanant/asyncapi-doc/example/nats
 
 go 1.24.0
 
