@@ -146,7 +146,7 @@ func GetByNameType(typeName string, astFile *ast.Package) interface{} {
 
 	typeInfo := ExtractTypeFromAST(typeName, astFile)
 	if typeInfo != nil {
-		instance := CreateReflectValue(typeInfo)
+		instance := CreateReflectValueWithPkg(typeInfo, astFile)
 		if hasArray {
 			sliceType := reflect.SliceOf(reflect.TypeOf(instance))
 			return reflect.MakeSlice(sliceType, 0, 0).Interface()

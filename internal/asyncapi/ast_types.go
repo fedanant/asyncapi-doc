@@ -3,7 +3,6 @@ package asyncapi
 import (
 	"go/ast"
 	"go/token"
-	"log"
 	"reflect"
 	"time"
 )
@@ -197,6 +196,11 @@ func getDefaultValueForType(typeName string, isArray bool) interface{} {
 
 // CreateReflectValue creates a reflect.Value from TypeInfo
 func CreateReflectValue(typeInfo *TypeInfo) interface{} {
+	return CreateReflectValueWithPkg(typeInfo, nil)
+}
+
+// CreateReflectValueWithPkg creates a reflect.Value from TypeInfo with access to AST package for nested types
+func CreateReflectValueWithPkg(typeInfo *TypeInfo, pkg *ast.Package) interface{} {
 	if typeInfo == nil {
 		return struct{}{}
 	}
@@ -214,7 +218,7 @@ func CreateReflectValue(typeInfo *TypeInfo) interface{} {
 			jsonTag = field.Name
 		}
 
-		fieldType := getReflectType(field.Type, field.IsArray)
+		fieldType := getReflectTypeWithPkg(field.Type, field.IsArray, field.ElemType, pkg)
 
 		structField := reflect.StructField{
 			Name: field.Name,
@@ -239,9 +243,19 @@ func CreateReflectValue(typeInfo *TypeInfo) interface{} {
 }
 
 func getReflectType(typeName string, isArray bool) reflect.Type {
+	return getReflectTypeWithPkg(typeName, isArray, "", nil)
+}
+
+func getReflectTypeWithPkg(typeName string, isArray bool, elemType string, pkg *ast.Package) reflect.Type {
 	// Handle pointer types
 	if len(typeName) > 0 && typeName[0] == '*' {
 		typeName = typeName[1:]
+	}
+
+	// If it's an array type and starts with []
+	if len(typeName) > 2 && typeName[:2] == "[]" {
+		typeName = typeName[2:]
+		isArray = true
 	}
 
 	var baseType reflect.Type
@@ -278,10 +292,20 @@ func getReflectType(typeName string, isArray bool) reflect.Type {
 	case "time.Time":
 		baseType = reflect.TypeOf(time.Time{})
 	default:
-		baseType = reflect.TypeOf((*interface{})(nil)).Elem()
-	}
-	if baseType != nil {
-		log.Printf("Unknown type '%s', using interface{}", typeName)
+		// Try to extract the type from AST if package is available
+		if pkg != nil && elemType != "" {
+			nestedTypeInfo := ExtractTypeFromAST(elemType, pkg)
+			if nestedTypeInfo != nil {
+				nestedInstance := CreateReflectValueWithPkg(nestedTypeInfo, pkg)
+				baseType = reflect.TypeOf(nestedInstance)
+			} else {
+				// For unknown types, use interface{}
+				baseType = reflect.TypeOf((*interface{})(nil)).Elem()
+			}
+		} else {
+			// For unknown types, use interface{}
+			baseType = reflect.TypeOf((*interface{})(nil)).Elem()
+		}
 	}
 
 	if isArray {

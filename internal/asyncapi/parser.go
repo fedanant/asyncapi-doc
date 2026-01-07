@@ -60,8 +60,13 @@ func (p *Parser) ParseMain(comments []string) {
 			if serverName == "" {
 				serverName = "default"
 			}
+			// Strip protocol prefix from host if present (e.g., nats://localhost:4222 -> localhost:4222)
+			host := value
+			if idx := strings.Index(host, "://"); idx != -1 {
+				host = host[idx+3:]
+			}
 			p.asyncApi.Servers[serverName] = spec3.Server{
-				Host:     value,
+				Host:     host,
 				Protocol: protocol,
 			}
 		}
@@ -120,9 +125,16 @@ func (p *Parser) proccessOperation(operation *Operation) {
 		Description: operation.Message.Description,
 	}
 
-	// Set payload if available
+	// Set payload if available - create schema and use $ref
 	if operation.Message.MessageSample != nil {
-		message.Payload = operation.Message.MessageSample
+		schemaName := messageName + "Payload"
+		schema := GenerateJSONSchema(operation.Message.MessageSample)
+		p.asyncApi.Components.Schemas[schemaName] = schema
+
+		// Use $ref to reference the schema
+		message.Payload = map[string]interface{}{
+			"$ref": "#/components/schemas/" + schemaName,
+		}
 	}
 
 	p.asyncApi.Components.Messages[messageName] = message
@@ -171,12 +183,18 @@ func (p *Parser) proccessOperation(operation *Operation) {
 		replyChannelName := channelName + "Reply"
 		replyMessageName := replyChannelName + "Message"
 
-		// Create the reply message in components
+		// Create the reply message in components - create schema and use $ref
+		replySchemaName := replyMessageName + "Payload"
+		replySchema := GenerateJSONSchema(operation.MessageResponse.MessageSample)
+		p.asyncApi.Components.Schemas[replySchemaName] = replySchema
+
 		replyMessage := spec3.Message{
 			Name:        replyMessageName,
 			Summary:     operation.MessageResponse.Summary,
 			Description: operation.MessageResponse.Description,
-			Payload:     operation.MessageResponse.MessageSample,
+			Payload: map[string]interface{}{
+				"$ref": "#/components/schemas/" + replySchemaName,
+			},
 		}
 		p.asyncApi.Components.Messages[replyMessageName] = replyMessage
 
