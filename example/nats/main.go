@@ -14,6 +14,17 @@ import (
 
 // @title NATS Message Service
 // @version 1.0.0
+// @description A comprehensive NATS-based message service for handling user and order events
+// @termsOfService https://example.com/terms
+// @contact.name NATS Service Team
+// @contact.email nats-support@example.com
+// @contact.url https://example.com/nats-support
+// @license.name Apache 2.0
+// @license.url https://www.apache.org/licenses/LICENSE-2.0.html
+// @tag users - User management events
+// @tag orders - Order processing events
+// @externalDocs.description NATS Service Documentation
+// @externalDocs.url https://docs.example.com/nats-service
 // @protocol nats
 // @url nats://localhost:4222
 

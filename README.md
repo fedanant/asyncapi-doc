@@ -44,6 +44,17 @@ Add service-level annotations to your main function:
 ```go
 // @title User Service API
 // @version 1.0.0
+// @description A comprehensive user management service for handling user events
+// @termsOfService https://example.com/terms
+// @contact.name API Support Team
+// @contact.email support@example.com
+// @contact.url https://example.com/support
+// @license.name Apache 2.0
+// @license.url https://www.apache.org/licenses/LICENSE-2.0.html
+// @tag users - User management operations
+// @tag events - Event handling
+// @externalDocs.description Find more info here
+// @externalDocs.url https://docs.example.com
 // @protocol nats
 // @url nats://localhost:4222
 
@@ -151,6 +162,16 @@ func main() {
 |-----|-------------|----------|---------|
 | `@title` | API title/name | Yes | `@title Order Management API` |
 | `@version` | API version | Yes | `@version 1.0.0` |
+| `@description` | Brief description of the API's purpose and features | No | `@description This API handles order management events` |
+| `@termsOfService` | URL or document specifying the API's terms of service | No | `@termsOfService https://example.com/terms` |
+| `@contact.name` | Name of the API's owner or maintainer | No | `@contact.name API Support Team` |
+| `@contact.email` | Contact email address | No | `@contact.email support@example.com` |
+| `@contact.url` | Contact URL | No | `@contact.url https://example.com/support` |
+| `@license.name` | API's license name | No | `@license.name Apache 2.0` |
+| `@license.url` | API's license URL | No | `@license.url https://www.apache.org/licenses/LICENSE-2.0.html` |
+| `@tag` | Keywords to organize and categorize API documentation (can be used multiple times) | No | `@tag orders - Order management operations` |
+| `@externalDocs.description` | Description for external documentation | No | `@externalDocs.description Additional API documentation` |
+| `@externalDocs.url` | URL to external documentation | No | `@externalDocs.url https://docs.example.com/api` |
 | `@protocol` | Message protocol | Yes | `@protocol nats`, `@protocol amqp`, `@protocol mqtt` |
 | `@url` | Server URL | Yes | `@url nats://localhost:4222` |
 
@@ -337,6 +358,17 @@ import (
 
 // @title E-Commerce Event Service
 // @version 2.0.0
+// @description Event-driven microservice for e-commerce order and payment processing
+// @termsOfService https://ecommerce.example.com/terms
+// @contact.name E-Commerce Team
+// @contact.email ecommerce@example.com
+// @contact.url https://ecommerce.example.com/support
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+// @tag orders - Order processing events
+// @tag payments - Payment processing events
+// @externalDocs.description E-Commerce API Documentation
+// @externalDocs.url https://docs.ecommerce.example.com
 // @protocol amqp
 // @url amqp://localhost:5672
 

@@ -7,14 +7,16 @@ import "gopkg.in/yaml.v3"
 
 // AsyncAPI represents the root object of an AsyncAPI 3.0.0 document.
 type AsyncAPI struct {
-	AsyncAPI           string                `json:"asyncapi" yaml:"asyncapi"`
-	ID                 string                `json:"id,omitempty" yaml:"id,omitempty"`
-	Info               Info                  `json:"info" yaml:"info"`
-	Servers            map[string]Server     `json:"servers,omitempty" yaml:"servers,omitempty"`
-	DefaultContentType string                `json:"defaultContentType,omitempty" yaml:"defaultContentType,omitempty"`
-	Channels           map[string]Channel    `json:"channels,omitempty" yaml:"channels,omitempty"`
-	Operations         map[string]Operation  `json:"operations,omitempty" yaml:"operations,omitempty"`
-	Components         *Components           `json:"components,omitempty" yaml:"components,omitempty"`
+	AsyncAPI           string               `json:"asyncapi" yaml:"asyncapi"`
+	ID                 string               `json:"id,omitempty" yaml:"id,omitempty"`
+	Info               Info                 `json:"info" yaml:"info"`
+	Servers            map[string]Server    `json:"servers,omitempty" yaml:"servers,omitempty"`
+	DefaultContentType string               `json:"defaultContentType,omitempty" yaml:"defaultContentType,omitempty"`
+	Channels           map[string]Channel   `json:"channels,omitempty" yaml:"channels,omitempty"`
+	Operations         map[string]Operation `json:"operations,omitempty" yaml:"operations,omitempty"`
+	Components         *Components          `json:"components,omitempty" yaml:"components,omitempty"`
+	Tags               []Tag                `json:"tags,omitempty" yaml:"tags,omitempty"`
+	ExternalDocs       *ExternalDocs        `json:"externalDocs,omitempty" yaml:"externalDocs,omitempty"`
 }
 
 // NewAsyncAPI creates a new AsyncAPI 3.0.0 document with default values.
@@ -106,11 +108,11 @@ type Channel struct {
 
 // Parameter represents a channel parameter.
 type Parameter struct {
-	Description string `json:"description,omitempty" yaml:"description,omitempty"`
-	Default     string `json:"default,omitempty" yaml:"default,omitempty"`
+	Description string   `json:"description,omitempty" yaml:"description,omitempty"`
+	Default     string   `json:"default,omitempty" yaml:"default,omitempty"`
 	Enum        []string `json:"enum,omitempty" yaml:"enum,omitempty"`
 	Examples    []string `json:"examples,omitempty" yaml:"examples,omitempty"`
-	Location    string `json:"location,omitempty" yaml:"location,omitempty"`
+	Location    string   `json:"location,omitempty" yaml:"location,omitempty"`
 }
 
 // Operation represents an operation in AsyncAPI 3.0.
@@ -186,35 +188,35 @@ type Reference struct {
 
 // Components holds reusable objects for the specification.
 type Components struct {
-	Schemas           map[string]interface{}         `json:"schemas,omitempty" yaml:"schemas,omitempty"`
-	Servers           map[string]Server              `json:"servers,omitempty" yaml:"servers,omitempty"`
-	Channels          map[string]Channel             `json:"channels,omitempty" yaml:"channels,omitempty"`
-	Operations        map[string]Operation           `json:"operations,omitempty" yaml:"operations,omitempty"`
-	Messages          map[string]Message             `json:"messages,omitempty" yaml:"messages,omitempty"`
-	SecuritySchemes   map[string]SecurityScheme      `json:"securitySchemes,omitempty" yaml:"securitySchemes,omitempty"`
-	Parameters        map[string]Parameter           `json:"parameters,omitempty" yaml:"parameters,omitempty"`
-	CorrelationIDs    map[string]CorrelationID       `json:"correlationIds,omitempty" yaml:"correlationIds,omitempty"`
-	OperationTraits   map[string]OperationTrait      `json:"operationTraits,omitempty" yaml:"operationTraits,omitempty"`
-	MessageTraits     map[string]MessageTrait        `json:"messageTraits,omitempty" yaml:"messageTraits,omitempty"`
-	Replies           map[string]OperationReply      `json:"replies,omitempty" yaml:"replies,omitempty"`
+	Schemas           map[string]interface{}           `json:"schemas,omitempty" yaml:"schemas,omitempty"`
+	Servers           map[string]Server                `json:"servers,omitempty" yaml:"servers,omitempty"`
+	Channels          map[string]Channel               `json:"channels,omitempty" yaml:"channels,omitempty"`
+	Operations        map[string]Operation             `json:"operations,omitempty" yaml:"operations,omitempty"`
+	Messages          map[string]Message               `json:"messages,omitempty" yaml:"messages,omitempty"`
+	SecuritySchemes   map[string]SecurityScheme        `json:"securitySchemes,omitempty" yaml:"securitySchemes,omitempty"`
+	Parameters        map[string]Parameter             `json:"parameters,omitempty" yaml:"parameters,omitempty"`
+	CorrelationIDs    map[string]CorrelationID         `json:"correlationIds,omitempty" yaml:"correlationIds,omitempty"`
+	OperationTraits   map[string]OperationTrait        `json:"operationTraits,omitempty" yaml:"operationTraits,omitempty"`
+	MessageTraits     map[string]MessageTrait          `json:"messageTraits,omitempty" yaml:"messageTraits,omitempty"`
+	Replies           map[string]OperationReply        `json:"replies,omitempty" yaml:"replies,omitempty"`
 	ReplyAddresses    map[string]OperationReplyAddress `json:"replyAddresses,omitempty" yaml:"replyAddresses,omitempty"`
-	ServerBindings    map[string]interface{}         `json:"serverBindings,omitempty" yaml:"serverBindings,omitempty"`
-	ChannelBindings   map[string]interface{}         `json:"channelBindings,omitempty" yaml:"channelBindings,omitempty"`
-	OperationBindings map[string]interface{}         `json:"operationBindings,omitempty" yaml:"operationBindings,omitempty"`
-	MessageBindings   map[string]interface{}         `json:"messageBindings,omitempty" yaml:"messageBindings,omitempty"`
+	ServerBindings    map[string]interface{}           `json:"serverBindings,omitempty" yaml:"serverBindings,omitempty"`
+	ChannelBindings   map[string]interface{}           `json:"channelBindings,omitempty" yaml:"channelBindings,omitempty"`
+	OperationBindings map[string]interface{}           `json:"operationBindings,omitempty" yaml:"operationBindings,omitempty"`
+	MessageBindings   map[string]interface{}           `json:"messageBindings,omitempty" yaml:"messageBindings,omitempty"`
 }
 
 // SecurityScheme defines a security scheme.
 type SecurityScheme struct {
-	Type             string            `json:"type" yaml:"type"`
-	Description      string            `json:"description,omitempty" yaml:"description,omitempty"`
-	Name             string            `json:"name,omitempty" yaml:"name,omitempty"`
-	In               string            `json:"in,omitempty" yaml:"in,omitempty"`
-	Scheme           string            `json:"scheme,omitempty" yaml:"scheme,omitempty"`
-	BearerFormat     string            `json:"bearerFormat,omitempty" yaml:"bearerFormat,omitempty"`
-	Flows            *OAuthFlows       `json:"flows,omitempty" yaml:"flows,omitempty"`
-	OpenIDConnectURL string            `json:"openIdConnectUrl,omitempty" yaml:"openIdConnectUrl,omitempty"`
-	Scopes           []string          `json:"scopes,omitempty" yaml:"scopes,omitempty"`
+	Type             string      `json:"type" yaml:"type"`
+	Description      string      `json:"description,omitempty" yaml:"description,omitempty"`
+	Name             string      `json:"name,omitempty" yaml:"name,omitempty"`
+	In               string      `json:"in,omitempty" yaml:"in,omitempty"`
+	Scheme           string      `json:"scheme,omitempty" yaml:"scheme,omitempty"`
+	BearerFormat     string      `json:"bearerFormat,omitempty" yaml:"bearerFormat,omitempty"`
+	Flows            *OAuthFlows `json:"flows,omitempty" yaml:"flows,omitempty"`
+	OpenIDConnectURL string      `json:"openIdConnectUrl,omitempty" yaml:"openIdConnectUrl,omitempty"`
+	Scopes           []string    `json:"scopes,omitempty" yaml:"scopes,omitempty"`
 }
 
 // OAuthFlows defines OAuth flows configuration.

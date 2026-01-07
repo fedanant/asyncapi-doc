@@ -9,17 +9,26 @@ import (
 )
 
 const (
-	titleAttr       = "@title"
-	urlAttr         = "@url"
-	hostAttr        = "@host"
-	versionAttr     = "@version"
-	typeAttr        = "@type"
-	nameAttr        = "@name"
-	protocolAttr    = "@protocol"
-	descriptionAttr = "@description"
-	summaryAttr     = "@summary"
-	payloadAttr     = "@payload"
-	responseAttr    = "@response"
+	titleAttr            = "@title"
+	urlAttr              = "@url"
+	hostAttr             = "@host"
+	versionAttr          = "@version"
+	typeAttr             = "@type"
+	nameAttr             = "@name"
+	protocolAttr         = "@protocol"
+	descriptionAttr      = "@description"
+	summaryAttr          = "@summary"
+	payloadAttr          = "@payload"
+	responseAttr         = "@response"
+	termsOfServiceAttr   = "@termsofservice"
+	contactNameAttr      = "@contact.name"
+	contactURLAttr       = "@contact.url"
+	contactEmailAttr     = "@contact.email"
+	licenseNameAttr      = "@license.name"
+	licenseURLAttr       = "@license.url"
+	tagAttr              = "@tag"
+	externalDocsDescAttr = "@externaldocs.description"
+	externalDocsURLAttr  = "@externaldocs.url"
 )
 
 // Parser parses Go source comments and generates AsyncAPI 3.0 specifications.
@@ -39,6 +48,9 @@ func NewParser() *Parser {
 func (p *Parser) ParseMain(comments []string) {
 	var protocol string
 	var serverName string
+	var tags []spec3.Tag
+	var externalDocs *spec3.ExternalDocs
+
 	for i := range comments {
 		commentLine := comments[i]
 		attribute := strings.Split(commentLine, " ")[0]
@@ -53,6 +65,53 @@ func (p *Parser) ParseMain(comments []string) {
 			}
 		case versionAttr:
 			p.asyncApi.Info.Version = value
+		case descriptionAttr:
+			p.asyncApi.Info.Description = value
+		case termsOfServiceAttr:
+			p.asyncApi.Info.TermsOfService = value
+		case contactNameAttr:
+			if p.asyncApi.Info.Contact == nil {
+				p.asyncApi.Info.Contact = &spec3.Contact{}
+			}
+			p.asyncApi.Info.Contact.Name = value
+		case contactEmailAttr:
+			if p.asyncApi.Info.Contact == nil {
+				p.asyncApi.Info.Contact = &spec3.Contact{}
+			}
+			p.asyncApi.Info.Contact.Email = value
+		case contactURLAttr:
+			if p.asyncApi.Info.Contact == nil {
+				p.asyncApi.Info.Contact = &spec3.Contact{}
+			}
+			p.asyncApi.Info.Contact.URL = value
+		case licenseNameAttr:
+			if p.asyncApi.Info.License == nil {
+				p.asyncApi.Info.License = &spec3.License{}
+			}
+			p.asyncApi.Info.License.Name = value
+		case licenseURLAttr:
+			if p.asyncApi.Info.License == nil {
+				p.asyncApi.Info.License = &spec3.License{}
+			}
+			p.asyncApi.Info.License.URL = value
+		case tagAttr:
+			// Parse tag in format: "name - description" or just "name"
+			tagParts := strings.SplitN(value, " - ", 2)
+			tag := spec3.Tag{Name: strings.TrimSpace(tagParts[0])}
+			if len(tagParts) > 1 {
+				tag.Description = strings.TrimSpace(tagParts[1])
+			}
+			tags = append(tags, tag)
+		case externalDocsDescAttr:
+			if externalDocs == nil {
+				externalDocs = &spec3.ExternalDocs{}
+			}
+			externalDocs.Description = value
+		case externalDocsURLAttr:
+			if externalDocs == nil {
+				externalDocs = &spec3.ExternalDocs{}
+			}
+			externalDocs.URL = value
 		case protocolAttr:
 			protocol = value
 		case urlAttr, hostAttr:
@@ -71,6 +130,14 @@ func (p *Parser) ParseMain(comments []string) {
 				Protocol: protocol,
 			}
 		}
+	}
+
+	// Store tags and externalDocs in AsyncAPI root level if present
+	if len(tags) > 0 {
+		p.asyncApi.Tags = tags
+	}
+	if externalDocs != nil && externalDocs.URL != "" {
+		p.asyncApi.ExternalDocs = externalDocs
 	}
 }
 

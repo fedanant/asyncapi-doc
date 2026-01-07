@@ -84,6 +84,134 @@ func TestParseMain(t *testing.T) {
 	}
 }
 
+func TestParseMainWithInfoAnnotations(t *testing.T) {
+	tests := []struct {
+		name                string
+		comments            []string
+		wantDescription     string
+		wantTermsOfService  string
+		wantContactName     string
+		wantContactEmail    string
+		wantContactURL      string
+		wantLicenseName     string
+		wantLicenseURL      string
+		wantTagsCount       int
+		wantExternalDocsURL string
+	}{
+		{
+			name: "parse all info annotations",
+			comments: []string{
+				"@title Complete API",
+				"@version 1.0.0",
+				"@description This is a comprehensive API for testing",
+				"@termsOfService https://example.com/terms",
+				"@contact.name API Support Team",
+				"@contact.email support@example.com",
+				"@contact.url https://example.com/support",
+				"@license.name Apache 2.0",
+				"@license.url https://www.apache.org/licenses/LICENSE-2.0.html",
+				"@tag users - User management operations",
+				"@tag orders - Order processing",
+				"@externalDocs.description Find more info here",
+				"@externalDocs.url https://docs.example.com",
+				"@protocol nats",
+				"@url nats://localhost:4222",
+			},
+			wantDescription:     "This is a comprehensive API for testing",
+			wantTermsOfService:  "https://example.com/terms",
+			wantContactName:     "API Support Team",
+			wantContactEmail:    "support@example.com",
+			wantContactURL:      "https://example.com/support",
+			wantLicenseName:     "Apache 2.0",
+			wantLicenseURL:      "https://www.apache.org/licenses/LICENSE-2.0.html",
+			wantTagsCount:       2,
+			wantExternalDocsURL: "https://docs.example.com",
+		},
+		{
+			name: "parse partial info annotations",
+			comments: []string{
+				"@title Minimal API",
+				"@version 1.0.0",
+				"@description A minimal API",
+				"@license.name MIT",
+				"@protocol nats",
+				"@url nats://localhost:4222",
+			},
+			wantDescription: "A minimal API",
+			wantLicenseName: "MIT",
+			wantTagsCount:   0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parser := NewParser()
+			parser.ParseMain(tt.comments)
+
+			if parser.asyncApi.Info.Description != tt.wantDescription {
+				t.Errorf("Description = %q, want %q", parser.asyncApi.Info.Description, tt.wantDescription)
+			}
+
+			if parser.asyncApi.Info.TermsOfService != tt.wantTermsOfService {
+				t.Errorf("TermsOfService = %q, want %q", parser.asyncApi.Info.TermsOfService, tt.wantTermsOfService)
+			}
+
+			// Test contact fields
+			if tt.wantContactName != "" || tt.wantContactEmail != "" || tt.wantContactURL != "" {
+				if parser.asyncApi.Info.Contact == nil {
+					t.Fatal("Contact should not be nil")
+				}
+				if parser.asyncApi.Info.Contact.Name != tt.wantContactName {
+					t.Errorf("Contact.Name = %q, want %q", parser.asyncApi.Info.Contact.Name, tt.wantContactName)
+				}
+				if parser.asyncApi.Info.Contact.Email != tt.wantContactEmail {
+					t.Errorf("Contact.Email = %q, want %q", parser.asyncApi.Info.Contact.Email, tt.wantContactEmail)
+				}
+				if parser.asyncApi.Info.Contact.URL != tt.wantContactURL {
+					t.Errorf("Contact.URL = %q, want %q", parser.asyncApi.Info.Contact.URL, tt.wantContactURL)
+				}
+			}
+
+			// Test license fields
+			if tt.wantLicenseName != "" || tt.wantLicenseURL != "" {
+				if parser.asyncApi.Info.License == nil {
+					t.Fatal("License should not be nil")
+				}
+				if parser.asyncApi.Info.License.Name != tt.wantLicenseName {
+					t.Errorf("License.Name = %q, want %q", parser.asyncApi.Info.License.Name, tt.wantLicenseName)
+				}
+				if parser.asyncApi.Info.License.URL != tt.wantLicenseURL {
+					t.Errorf("License.URL = %q, want %q", parser.asyncApi.Info.License.URL, tt.wantLicenseURL)
+				}
+			}
+
+			// Test tags
+			if len(parser.asyncApi.Tags) != tt.wantTagsCount {
+				t.Errorf("Tags count = %d, want %d", len(parser.asyncApi.Tags), tt.wantTagsCount)
+			}
+
+			if tt.wantTagsCount > 0 {
+				if parser.asyncApi.Tags[0].Name != "users" {
+					t.Errorf("First tag name = %q, want %q", parser.asyncApi.Tags[0].Name, "users")
+				}
+				if parser.asyncApi.Tags[0].Description != "User management operations" {
+					t.Errorf("First tag description = %q, want %q", parser.asyncApi.Tags[0].Description, "User management operations")
+				}
+			}
+
+			// Test external docs
+			if tt.wantExternalDocsURL != "" {
+				if parser.asyncApi.ExternalDocs == nil {
+					t.Fatal("ExternalDocs should not be nil")
+				}
+				if parser.asyncApi.ExternalDocs.URL != tt.wantExternalDocsURL {
+					t.Errorf("ExternalDocs.URL = %q, want %q", parser.asyncApi.ExternalDocs.URL, tt.wantExternalDocsURL)
+				}
+			}
+		})
+	}
+}
+
 func TestValidate(t *testing.T) {
 	tests := []struct {
 		name    string
