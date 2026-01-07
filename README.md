@@ -263,6 +263,213 @@ func (s *Service) SubscribeToUserUpdates(ctx context.Context) {
 | `@payload` | Go type name for message payload | Yes | `@payload OrderPlacedEvent` |
 | `@response` | Go type name for response (request-reply pattern) | No | `@response OrderResponse` |
 
+### Struct Field Tags
+
+AsyncAPI Generator supports special struct field tags to enhance the generated JSON Schema with validation rules, formatting, examples, and descriptions. These tags work with your existing Go structs to produce more detailed and accurate API specifications.
+
+#### Available Tags
+
+| Tag | Description | Example |
+|-----|-------------|---------|
+| `json` | Standard JSON tag for field naming and omitempty | `json:"email,omitempty"` |
+| `description` | Field description in the schema | `description:"User email address"` |
+| `example` | Example value (auto-typed based on field type) | `example:"user@example.com"` |
+| `format` | JSON Schema format specifier | `format:"email"` |
+| `required` | Explicitly mark field as required | `required:"true"` |
+| `validate` | Validation rules (comma-separated) | `validate:"min=0,max=100"` |
+
+#### go-playground/validator Compatibility
+
+AsyncAPI Generator is **fully compatible** with [go-playground/validator/v10](https://pkg.go.dev/github.com/go-playground/validator/v10) tags. You can use the same `validate` tags you already use for runtime validation, and they will be automatically mapped to JSON Schema constraints in your AsyncAPI specification.
+
+#### Validation Rules
+
+The `validate` tag supports extensive validation rules that map to JSON Schema constraints:
+
+##### Numeric Comparisons
+
+| Rule | Description | JSON Schema | Example |
+|------|-------------|-------------|---------|
+| `min=N` | Minimum value/length | `minimum` or `minLength` | `validate:"min=0"` |
+| `max=N` | Maximum value/length | `maximum` or `maxLength` | `validate:"max=100"` |
+| `gte=N` | Greater than or equal | `minimum` | `validate:"gte=0"` |
+| `lte=N` | Less than or equal | `maximum` | `validate:"lte=100"` |
+| `gt=N` | Greater than (exclusive) | `exclusiveMinimum` | `validate:"gt=0"` |
+| `lt=N` | Less than (exclusive) | `exclusiveMaximum` | `validate:"lt=100"` |
+| `eq=N` | Equals | `const` | `validate:"eq=5"` |
+
+##### String Length
+
+| Rule | Description | JSON Schema | Example |
+|------|-------------|-------------|---------|
+| `min=N` | Minimum string length | `minLength` | `validate:"min=3"` |
+| `max=N` | Maximum string length | `maxLength` | `validate:"max=255"` |
+| `len=N` | Exact length | `minLength` & `maxLength` | `validate:"len=10"` |
+
+##### String Patterns
+
+| Rule | Description | JSON Schema | Example |
+|------|-------------|-------------|---------|
+| `alpha` | Alphabetic only | `pattern: ^[a-zA-Z]+$` | `validate:"alpha"` |
+| `alphanum` | Alphanumeric | `pattern: ^[a-zA-Z0-9]+$` | `validate:"alphanum"` |
+| `numeric` | Numeric digits | `pattern: ^[0-9]+$` | `validate:"numeric"` |
+| `lowercase` | Lowercase only | `pattern: ^[a-z]+$` | `validate:"lowercase"` |
+| `uppercase` | Uppercase only | `pattern: ^[A-Z]+$` | `validate:"uppercase"` |
+| `hexadecimal` | Hex string | `pattern: ^[0-9a-fA-F]+$` | `validate:"hexadecimal"` |
+| `hexcolor` | Hex color | `pattern: ^#[0-9a-fA-F]{3,6}$` | `validate:"hexcolor"` |
+| `startswith=abc` | Starts with | `pattern: ^abc` | `validate:"startswith=user_"` |
+| `endswith=xyz` | Ends with | `pattern: xyz$` | `validate:"endswith=.com"` |
+| `contains=str` | Contains string | `pattern` | `validate:"contains=test"` |
+| `pattern=regex` | Custom regex | `pattern` | `validate:"pattern=^[a-z]+$"` |
+
+##### Format Validations
+
+| Rule | Description | JSON Schema | Example |
+|------|-------------|-------------|---------|
+| `email` | Email address | `format: email` | `validate:"email"` |
+| `url` | URL | `format: uri` | `validate:"url"` |
+| `uri` | URI | `format: uri` | `validate:"uri"` |
+| `uuid` | UUID (any version) | `format: uuid` | `validate:"uuid"` |
+| `uuid4` | UUID v4 | `format: uuid` | `validate:"uuid4"` |
+| `datetime` | Date-time | `format: date-time` | `validate:"datetime"` |
+| `hostname` | Hostname | `format: hostname` | `validate:"hostname"` |
+| `ipv4` | IPv4 address | `format: ipv4` | `validate:"ipv4"` |
+| `ipv6` | IPv6 address | `format: ipv6` | `validate:"ipv6"` |
+| `mac` | MAC address | `pattern` (MAC format) | `validate:"mac"` |
+| `base64` | Base64 string | `format: base64` | `validate:"base64"` |
+| `jwt` | JWT token | `pattern` (JWT format) | `validate:"jwt"` |
+| `json` | JSON string | `contentMediaType: application/json` | `validate:"json"` |
+
+##### Geographic
+
+| Rule | Description | JSON Schema | Example |
+|------|-------------|-------------|---------|
+| `latitude` | Latitude (-90 to 90) | `minimum: -90, maximum: 90` | `validate:"latitude"` |
+| `longitude` | Longitude (-180 to 180) | `minimum: -180, maximum: 180` | `validate:"longitude"` |
+
+##### Network & Protocols
+
+| Rule | Description | JSON Schema | Example |
+|------|-------------|-------------|---------|
+| `port` | Port number (1-65535) | `minimum: 1, maximum: 65535` | `validate:"port"` |
+| `cidr` | CIDR notation | `pattern` (CIDR format) | `validate:"cidr"` |
+
+##### Document Identifiers
+
+| Rule | Description | JSON Schema | Example |
+|------|-------------|-------------|---------|
+| `isbn` | ISBN (10 or 13) | `pattern` (ISBN format) | `validate:"isbn"` |
+| `isbn10` | ISBN-10 | `pattern` (ISBN-10 format) | `validate:"isbn10"` |
+| `isbn13` | ISBN-13 | `pattern` (ISBN-13 format) | `validate:"isbn13"` |
+| `issn` | ISSN | `pattern` (ISSN format) | `validate:"issn"` |
+
+##### Financial & Identity
+
+| Rule | Description | JSON Schema | Example |
+|------|-------------|-------------|---------|
+| `credit_card` | Credit card | `pattern` (CC format) | `validate:"credit_card"` |
+| `btc_addr` | Bitcoin address | `pattern` (BTC format) | `validate:"btc_addr"` |
+| `eth_addr` | Ethereum address | `pattern` (ETH format) | `validate:"eth_addr"` |
+| `ssn` | Social Security Number | `pattern` (SSN format) | `validate:"ssn"` |
+
+##### Versioning
+
+| Rule | Description | JSON Schema | Example |
+|------|-------------|-------------|---------|
+| `semver` | Semantic version | `pattern` (semver format) | `validate:"semver"` |
+
+##### Phone Numbers
+
+| Rule | Description | JSON Schema | Example |
+|------|-------------|-------------|---------|
+| `e164` | E.164 phone format | `pattern` (E.164 format) | `validate:"e164"` |
+
+##### Enum & Constants
+
+| Rule | Description | JSON Schema | Example |
+|------|-------------|-------------|---------|
+| `oneof=v1\|v2` | Enum values | `enum` | `validate:"oneof=red\|green\|blue"` |
+| `eq=value` | Constant value | `const` | `validate:"eq=active"` |
+
+##### Array Validations
+
+| Rule | Description | JSON Schema | Example |
+|------|-------------|-------------|---------|
+| `min=N` | Minimum items | `minItems` | `validate:"min=1"` |
+| `max=N` | Maximum items | `maxItems` | `validate:"max=10"` |
+| `unique` | Unique items | `uniqueItems: true` | `validate:"unique"` |
+| `dive` | Validate elements | Applied to array items | `validate:"dive,min=1"` |
+
+Multiple rules can be combined with commas: `validate:"required,min=0,max=100,email"`
+
+#### Complete Example
+
+```go
+type UserCreatedEvent struct {
+    // UserID is the unique identifier for the user
+    UserID string `json:"userId" description:"Unique user identifier" example:"user-123" validate:"required,uuid4"`
+    
+    // Email address with format validation
+    Email string `json:"email" description:"User email address" example:"user@example.com" validate:"required,email"`
+    
+    // Username with pattern validation
+    Username string `json:"username" description:"User's display name" example:"johndoe" validate:"required,alphanum,min=3,max=20"`
+    
+    // Age with range validation
+    Age int `json:"age" description:"User age in years" example:"25" validate:"required,gte=0,lte=150"`
+    
+    // Account type with enum validation
+    AccountType string `json:"accountType" description:"Type of user account" example:"premium" validate:"required,oneof=free basic premium enterprise"`
+    
+    // Score with exclusive bounds
+    Score float64 `json:"score,omitempty" description:"User score" example:"95.5" validate:"omitempty,gt=0,lt=100"`
+    
+    // Website URL
+    Website string `json:"website,omitempty" description:"Personal website" example:"https://example.com" validate:"omitempty,url"`
+    
+    // Phone number in E.164 format
+    Phone string `json:"phone,omitempty" description:"Phone number" example:"+12025551234" validate:"omitempty,e164"`
+    
+    // IP address
+    IPAddress string `json:"ipAddress,omitempty" description:"User's IP address" example:"192.168.1.1" validate:"omitempty,ipv4"`
+    
+    // Hex color preference
+    FavoriteColor string `json:"favoriteColor,omitempty" description:"Favorite color" example:"#FF5733" validate:"omitempty,hexcolor"`
+    
+    // Timestamp with format
+    CreatedAt time.Time `json:"createdAt" description:"Account creation timestamp" validate:"required"`
+    
+    // Optional field with description
+    Bio string `json:"bio,omitempty" description:"User biography" validate:"omitempty,max=500"`
+    
+    // Tags array with unique validation
+    Tags []string `json:"tags,omitempty" description:"User tags" validate:"omitempty,unique,dive,min=1,max=50"`
+}
+```
+
+This generates a JSON Schema with:
+- Field descriptions
+- Example values
+- Format specifications (email, date-time)
+- Validation constraints (min, max, length, pattern, enum)
+- Required/optional field marking
+
+#### Field Description Comments
+
+You can also document fields using Go comments. The generator uses the comment directly above the field as the description:
+
+```go
+type OrderPlacedEvent struct {
+    // Unique order identifier
+    OrderID string `json:"orderId" example:"order-456"`
+    
+    // Total price in USD
+    TotalPrice float64 `json:"totalPrice" example:"99.99" validate:"min=0"`
+}
+```
+
+**Note:** If both a comment and `description` tag are present, the `description` tag takes precedence.
+
 ### Parameterized Channels
 
 Use `{paramName}` syntax for dynamic channel names:
