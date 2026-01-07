@@ -2,7 +2,6 @@ package asyncapi
 
 import (
 	"fmt"
-	"go/ast"
 	"log"
 	"reflect"
 	"regexp"
@@ -16,7 +15,7 @@ type Msg struct {
 }
 
 type MsgResponse struct {
-	Id       string      `json:"id"`
+	ID       string      `json:"id"`
 	Response interface{} `json:"response"`
 }
 
@@ -55,9 +54,9 @@ func NewOperation() *Operation {
 	}
 }
 
-func (operation *Operation) ParseComment(comment string, astFile *ast.Package) error {
+func (operation *Operation) ParseComment(comment string, tc *TypeChecker) error {
 	commentLine := strings.TrimSpace(strings.TrimLeft(comment, "/"))
-	if len(commentLine) == 0 {
+	if commentLine == "" {
 		return nil
 	}
 
@@ -73,11 +72,11 @@ func (operation *Operation) ParseComment(comment string, astFile *ast.Package) e
 	case summaryAttr:
 		operation.ParseSummary(lineRemainder)
 	case payloadAttr:
-		if err := operation.ParsePayload(lineRemainder, astFile); err != nil {
+		if err := operation.ParsePayload(lineRemainder, tc); err != nil {
 			log.Printf("Warning: %v", err)
 		}
 	case responseAttr:
-		if err := operation.ParseResponse(lineRemainder, astFile); err != nil {
+		if err := operation.ParseResponse(lineRemainder, tc); err != nil {
 			log.Printf("Warning: %v", err)
 		}
 	}
@@ -110,8 +109,8 @@ func (operation *Operation) ParseSummary(summary string) {
 	operation.Message.Summary = summary
 }
 
-func (operation *Operation) ParsePayload(name string, astFile *ast.Package) error {
-	typeSpec := GetByNameType(name, astFile)
+func (operation *Operation) ParsePayload(name string, tc *TypeChecker) error {
+	typeSpec := GetByNameType(name, tc)
 	if typeSpec != nil {
 		operation.Message.MessageSample = Msg{
 			Data: typeSpec,
@@ -121,8 +120,8 @@ func (operation *Operation) ParsePayload(name string, astFile *ast.Package) erro
 	return fmt.Errorf("payload type not found: %s", name)
 }
 
-func (operation *Operation) ParseResponse(name string, astFile *ast.Package) error {
-	typeSpec := GetByNameType(name, astFile)
+func (operation *Operation) ParseResponse(name string, tc *TypeChecker) error {
+	typeSpec := GetByNameType(name, tc)
 	if typeSpec != nil {
 		operation.MessageResponse.MessageSample = MsgResponse{
 			Response: typeSpec,
@@ -132,7 +131,7 @@ func (operation *Operation) ParseResponse(name string, astFile *ast.Package) err
 	return fmt.Errorf("response type not found: %s", name)
 }
 
-func GetByNameType(typeName string, astFile *ast.Package) interface{} {
+func GetByNameType(typeName string, tc *TypeChecker) interface{} {
 	hasArray := false
 	originalTypeName := typeName
 
@@ -149,18 +148,21 @@ func GetByNameType(typeName string, astFile *ast.Package) interface{} {
 		return typeSpec
 	}
 
-	typeInfo := ExtractTypeFromAST(typeName, astFile)
+	// Use TypeChecker to extract type information
+	typeInfo := tc.ExtractTypeInfo(typeName)
 	if typeInfo != nil {
-		instance := CreateReflectValueWithPkg(typeInfo, astFile)
+		reflectType := tc.GetReflectType(typeInfo)
+		instance := reflect.New(reflectType).Elem()
 		if hasArray {
-			sliceType := reflect.SliceOf(reflect.TypeOf(instance))
+			sliceType := reflect.SliceOf(reflectType)
 			return reflect.MakeSlice(sliceType, 0, 0).Interface()
 		}
-		return instance
+		return instance.Interface()
 	}
 
-	if !strings.Contains(typeName, ".") {
-		typeName = astFile.Name + "." + typeName
+	// Try with package prefix
+	if !strings.Contains(typeName, ".") && tc.pkg != nil {
+		typeName = tc.pkg.Name() + "." + typeName
 	}
 
 	refType := reflect2.TypeByName(typeName)

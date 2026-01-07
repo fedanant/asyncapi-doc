@@ -6,13 +6,13 @@ import (
 	"os"
 )
 
-// Config holds the application configuration
+// Config holds the application configuration.
 type Config struct {
 	DefaultTemplate string `json:"default_template"`
 	OutputDir       string `json:"output_dir"`
 }
 
-// DefaultConfig returns the default configuration
+// DefaultConfig returns the default configuration.
 func DefaultConfig() *Config {
 	return &Config{
 		DefaultTemplate: "default",
@@ -20,7 +20,7 @@ func DefaultConfig() *Config {
 	}
 }
 
-// LoadConfig loads configuration from a file
+// LoadConfig loads configuration from a file.
 func LoadConfig(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {

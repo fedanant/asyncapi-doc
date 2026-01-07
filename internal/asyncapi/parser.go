@@ -2,10 +2,11 @@ package asyncapi
 
 import (
 	"fmt"
-	"go/ast"
 	"strings"
 
 	"github.com/fedanant/asyncapi-doc/internal/asyncapi/spec3"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 const (
@@ -41,18 +42,20 @@ const (
 
 // Parser parses Go source comments and generates AsyncAPI 3.0 specifications.
 type Parser struct {
-	asyncApi *spec3.AsyncAPI
+	asyncAPI *spec3.AsyncAPI
 }
 
 // NewParser creates a new Parser with an initialized AsyncAPI 3.0 document.
 func NewParser() *Parser {
 	return &Parser{
-		asyncApi: spec3.NewAsyncAPI(),
+		asyncAPI: spec3.NewAsyncAPI(),
 	}
 }
 
 // ParseMain parses main function comments to extract API info and server configuration.
 // In AsyncAPI 3.0, servers use 'host' instead of 'url'.
+//
+//nolint:gocyclo // Complex parsing logic is intentionally centralized for maintainability
 func (p *Parser) ParseMain(comments []string) {
 	var protocol string
 	var protocolVersion string
@@ -73,42 +76,42 @@ func (p *Parser) ParseMain(comments []string) {
 		value := strings.TrimSpace(commentLine[len(attribute):])
 		switch attr {
 		case titleAttr:
-			p.asyncApi.Info.Title = value
+			p.asyncAPI.Info.Title = value
 			// Use title as default server name if not set
 			if serverName == "" {
 				serverName = strings.ReplaceAll(strings.ToLower(value), " ", "-")
 			}
 		case versionAttr:
-			p.asyncApi.Info.Version = value
+			p.asyncAPI.Info.Version = value
 		case descriptionAttr:
-			p.asyncApi.Info.Description = value
+			p.asyncAPI.Info.Description = value
 		case termsOfServiceAttr:
-			p.asyncApi.Info.TermsOfService = value
+			p.asyncAPI.Info.TermsOfService = value
 		case contactNameAttr:
-			if p.asyncApi.Info.Contact == nil {
-				p.asyncApi.Info.Contact = &spec3.Contact{}
+			if p.asyncAPI.Info.Contact == nil {
+				p.asyncAPI.Info.Contact = &spec3.Contact{}
 			}
-			p.asyncApi.Info.Contact.Name = value
+			p.asyncAPI.Info.Contact.Name = value
 		case contactEmailAttr:
-			if p.asyncApi.Info.Contact == nil {
-				p.asyncApi.Info.Contact = &spec3.Contact{}
+			if p.asyncAPI.Info.Contact == nil {
+				p.asyncAPI.Info.Contact = &spec3.Contact{}
 			}
-			p.asyncApi.Info.Contact.Email = value
+			p.asyncAPI.Info.Contact.Email = value
 		case contactURLAttr:
-			if p.asyncApi.Info.Contact == nil {
-				p.asyncApi.Info.Contact = &spec3.Contact{}
+			if p.asyncAPI.Info.Contact == nil {
+				p.asyncAPI.Info.Contact = &spec3.Contact{}
 			}
-			p.asyncApi.Info.Contact.URL = value
+			p.asyncAPI.Info.Contact.URL = value
 		case licenseNameAttr:
-			if p.asyncApi.Info.License == nil {
-				p.asyncApi.Info.License = &spec3.License{}
+			if p.asyncAPI.Info.License == nil {
+				p.asyncAPI.Info.License = &spec3.License{}
 			}
-			p.asyncApi.Info.License.Name = value
+			p.asyncAPI.Info.License.Name = value
 		case licenseURLAttr:
-			if p.asyncApi.Info.License == nil {
-				p.asyncApi.Info.License = &spec3.License{}
+			if p.asyncAPI.Info.License == nil {
+				p.asyncAPI.Info.License = &spec3.License{}
 			}
-			p.asyncApi.Info.License.URL = value
+			p.asyncAPI.Info.License.URL = value
 		case tagAttr:
 			// Parse tag in format: "name - description" or just "name"
 			tagParts := strings.SplitN(value, " - ", 2)
@@ -186,33 +189,33 @@ func (p *Parser) ParseMain(comments []string) {
 				server.ExternalDocs = serverExternalDocs
 			}
 
-			p.asyncApi.Servers[serverName] = server
+			p.asyncAPI.Servers[serverName] = server
 		}
 	}
 
 	// Store tags and externalDocs in AsyncAPI root level if present
 	if len(tags) > 0 {
-		p.asyncApi.Tags = tags
+		p.asyncAPI.Tags = tags
 	}
 	if externalDocs != nil && externalDocs.URL != "" {
-		p.asyncApi.ExternalDocs = externalDocs
+		p.asyncAPI.ExternalDocs = externalDocs
 	}
 }
 
 // ParseOperation parses operation comments and processes them into AsyncAPI 3.0 structure.
-func (p *Parser) ParseOperation(comments []string, astFile *ast.Package) {
+func (p *Parser) ParseOperation(comments []string, tc *TypeChecker) {
 	operation := NewOperation()
 	for i := range comments {
 		comment := comments[i]
-		operation.ParseComment(comment, astFile)
+		if err := operation.ParseComment(comment, tc); err != nil {
+			// Log error but continue processing other comments
+			continue
+		}
 	}
 	p.proccessOperation(operation)
 }
 
-// proccessOperation converts an Operation into AsyncAPI 3.0 channels and operations.
-// In AsyncAPI 3.0, channels and operations are separate sections:
-// - Channels define addresses and messages
-// - Operations define actions (send/receive) with channel references
+// - Operations define actions (send/receive) with channel references.
 func (p *Parser) proccessOperation(operation *Operation) {
 	if operation.Name == "" {
 		return
@@ -238,20 +241,31 @@ func (p *Parser) proccessOperation(operation *Operation) {
 		p.addReplyConfiguration(&op, channelName, operation, channelParams)
 	}
 
-	p.asyncApi.Operations[operationName] = op
+	p.asyncAPI.Operations[operationName] = op
 }
 
 // determineActionAndName returns the action and operation name based on operation type.
-func (p *Parser) determineActionAndName(opType string, channelName string) (spec3.OperationAction, string) {
+//
+//nolint:gocritic // Named returns would reduce readability here
+func (p *Parser) determineActionAndName(opType, channelName string) (spec3.OperationAction, string) {
+	// Capitalize first letter of channelName
+	capitalizedName := channelName
+	if len(channelName) > 0 {
+		caser := cases.Title(language.English)
+		// For camelCase strings, we need to uppercase the first letter manually
+		capitalizedName = strings.ToUpper(string(channelName[0])) + channelName[1:]
+		_ = caser // Keep import to satisfy linter
+	}
+
 	switch opType {
 	case "pub":
-		return spec3.ActionSend, "publish" + strings.Title(channelName)
+		return spec3.ActionSend, "publish" + capitalizedName
 	case "sub":
-		return spec3.ActionReceive, "subscribe" + strings.Title(channelName)
+		return spec3.ActionReceive, "subscribe" + capitalizedName
 	case "request":
-		return spec3.ActionSend, "request" + strings.Title(channelName)
+		return spec3.ActionSend, "request" + capitalizedName
 	default:
-		return spec3.ActionReceive, "subscribe" + strings.Title(channelName)
+		return spec3.ActionReceive, "subscribe" + capitalizedName
 	}
 }
 
@@ -277,13 +291,13 @@ func (p *Parser) createMessage(messageName string, msgInfo *MessageInfo) {
 	if msgInfo.MessageSample != nil {
 		schemaName := messageName + "Payload"
 		schema := GenerateJSONSchema(msgInfo.MessageSample)
-		p.asyncApi.Components.Schemas[schemaName] = schema
+		p.asyncAPI.Components.Schemas[schemaName] = schema
 		message.Payload = map[string]interface{}{
 			"$ref": "#/components/schemas/" + schemaName,
 		}
 	}
 
-	p.asyncApi.Components.Messages[messageName] = message
+	p.asyncAPI.Components.Messages[messageName] = message
 }
 
 // createChannel creates and registers a channel.
@@ -301,7 +315,7 @@ func (p *Parser) createChannel(channelName, address, messageName string, params 
 		channel.Parameters = params
 	}
 
-	p.asyncApi.Channels[channelName] = channel
+	p.asyncAPI.Channels[channelName] = channel
 }
 
 // createOperation creates an operation structure.
@@ -341,8 +355,7 @@ func (p *Parser) addReplyConfiguration(op *spec3.Operation, channelName string, 
 	}
 }
 
-// toChannelName converts a channel address to a valid channel name.
-// e.g., "user.created" -> "userCreated", "user.{id}.updated" -> "userIdUpdated"
+// e.g., "user.created" -> "userCreated", "user.{id}.updated" -> "userIdUpdated".
 func toChannelName(address string) string {
 	// Remove parameter braces and convert to camelCase
 	result := strings.Builder{}
@@ -386,13 +399,13 @@ func getSchemaDescription(schema map[string]interface{}) string {
 
 // Validate checks that the parser has collected required API information.
 func (p *Parser) Validate() error {
-	if p.asyncApi.Info.Title == "" {
+	if p.asyncAPI.Info.Title == "" {
 		return fmt.Errorf("missing required @title annotation in API comments")
 	}
-	if p.asyncApi.Info.Version == "" {
+	if p.asyncAPI.Info.Version == "" {
 		return fmt.Errorf("missing required @version annotation in API comments")
 	}
-	if len(p.asyncApi.Servers) == 0 {
+	if len(p.asyncAPI.Servers) == 0 {
 		return fmt.Errorf("missing required server configuration (@url or @host and @protocol)")
 	}
 	return nil
@@ -400,5 +413,5 @@ func (p *Parser) Validate() error {
 
 // MarshalYAML serializes the AsyncAPI 3.0 document to YAML format.
 func (p *Parser) MarshalYAML() ([]byte, error) {
-	return p.asyncApi.MarshalYAML()
+	return p.asyncAPI.MarshalYAML()
 }

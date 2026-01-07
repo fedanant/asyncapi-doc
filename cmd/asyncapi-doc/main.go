@@ -47,7 +47,9 @@ func generate() {
 	output := fs.String("output", "./asyncapi.yaml", "output file for generated AsyncAPI specification")
 	verbose := fs.Bool("verbose", false, "enable verbose output")
 
-	fs.Parse(os.Args[2:])
+	if err := fs.Parse(os.Args[2:]); err != nil {
+		log.Fatalf("Failed to parse flags: %v\n", err)
+	}
 
 	if fs.NArg() < 1 {
 		fmt.Fprintf(os.Stderr, "Error: source directory is required\n")

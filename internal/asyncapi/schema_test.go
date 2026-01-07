@@ -213,7 +213,7 @@ func TestGenerateJSONSchema_NilPointer(t *testing.T) {
 		Name string `json:"name"`
 	}
 
-	var input *TestStruct = nil
+	var input *TestStruct
 
 	schema := GenerateJSONSchema(input)
 
@@ -268,7 +268,7 @@ func TestGenerateJSONSchema_MsgResponseWrapper(t *testing.T) {
 	}
 
 	input := MsgResponse{
-		Id: "request-123",
+		ID: "request-123",
 		Response: UserResponse{
 			Success: true,
 			Message: "OK",
@@ -288,7 +288,7 @@ func TestGenerateJSONSchema_MsgResponseWrapper(t *testing.T) {
 	}
 
 	// Should have success and message, not Id or Response
-	if _, hasId := properties["id"]; hasId {
+	if _, hasID := properties["id"]; hasID {
 		t.Error("Schema should not contain 'id' field from wrapper")
 	}
 

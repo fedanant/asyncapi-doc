@@ -13,19 +13,19 @@ func TestNewParser(t *testing.T) {
 		t.Fatal("NewParser returned nil")
 	}
 
-	if parser.asyncApi == nil {
+	if parser.asyncAPI == nil {
 		t.Error("asyncApi should be initialized")
 	}
 
-	if parser.asyncApi.Info.Title != "" {
+	if parser.asyncAPI.Info.Title != "" {
 		t.Error("Info.Title should be empty initially")
 	}
 
-	if parser.asyncApi.Channels == nil {
+	if parser.asyncAPI.Channels == nil {
 		t.Error("Channels map should be initialized")
 	}
 
-	if parser.asyncApi.Operations == nil {
+	if parser.asyncAPI.Operations == nil {
 		t.Error("Operations map should be initialized")
 	}
 }
@@ -69,15 +69,15 @@ func TestParseMain(t *testing.T) {
 			parser := NewParser()
 			parser.ParseMain(tt.comments)
 
-			if parser.asyncApi.Info.Title != tt.wantTitle {
-				t.Errorf("Title = %q, want %q", parser.asyncApi.Info.Title, tt.wantTitle)
+			if parser.asyncAPI.Info.Title != tt.wantTitle {
+				t.Errorf("Title = %q, want %q", parser.asyncAPI.Info.Title, tt.wantTitle)
 			}
 
-			if parser.asyncApi.Info.Version != tt.wantVersion {
-				t.Errorf("Version = %q, want %q", parser.asyncApi.Info.Version, tt.wantVersion)
+			if parser.asyncAPI.Info.Version != tt.wantVersion {
+				t.Errorf("Version = %q, want %q", parser.asyncAPI.Info.Version, tt.wantVersion)
 			}
 
-			if len(parser.asyncApi.Servers) == 0 {
+			if len(parser.asyncAPI.Servers) == 0 {
 				t.Error("Expected at least one server to be created")
 			}
 		})
@@ -148,64 +148,64 @@ func TestParseMainWithInfoAnnotations(t *testing.T) {
 			parser := NewParser()
 			parser.ParseMain(tt.comments)
 
-			if parser.asyncApi.Info.Description != tt.wantDescription {
-				t.Errorf("Description = %q, want %q", parser.asyncApi.Info.Description, tt.wantDescription)
+			if parser.asyncAPI.Info.Description != tt.wantDescription {
+				t.Errorf("Description = %q, want %q", parser.asyncAPI.Info.Description, tt.wantDescription)
 			}
 
-			if parser.asyncApi.Info.TermsOfService != tt.wantTermsOfService {
-				t.Errorf("TermsOfService = %q, want %q", parser.asyncApi.Info.TermsOfService, tt.wantTermsOfService)
+			if parser.asyncAPI.Info.TermsOfService != tt.wantTermsOfService {
+				t.Errorf("TermsOfService = %q, want %q", parser.asyncAPI.Info.TermsOfService, tt.wantTermsOfService)
 			}
 
 			// Test contact fields
 			if tt.wantContactName != "" || tt.wantContactEmail != "" || tt.wantContactURL != "" {
-				if parser.asyncApi.Info.Contact == nil {
+				if parser.asyncAPI.Info.Contact == nil {
 					t.Fatal("Contact should not be nil")
 				}
-				if parser.asyncApi.Info.Contact.Name != tt.wantContactName {
-					t.Errorf("Contact.Name = %q, want %q", parser.asyncApi.Info.Contact.Name, tt.wantContactName)
+				if parser.asyncAPI.Info.Contact.Name != tt.wantContactName {
+					t.Errorf("Contact.Name = %q, want %q", parser.asyncAPI.Info.Contact.Name, tt.wantContactName)
 				}
-				if parser.asyncApi.Info.Contact.Email != tt.wantContactEmail {
-					t.Errorf("Contact.Email = %q, want %q", parser.asyncApi.Info.Contact.Email, tt.wantContactEmail)
+				if parser.asyncAPI.Info.Contact.Email != tt.wantContactEmail {
+					t.Errorf("Contact.Email = %q, want %q", parser.asyncAPI.Info.Contact.Email, tt.wantContactEmail)
 				}
-				if parser.asyncApi.Info.Contact.URL != tt.wantContactURL {
-					t.Errorf("Contact.URL = %q, want %q", parser.asyncApi.Info.Contact.URL, tt.wantContactURL)
+				if parser.asyncAPI.Info.Contact.URL != tt.wantContactURL {
+					t.Errorf("Contact.URL = %q, want %q", parser.asyncAPI.Info.Contact.URL, tt.wantContactURL)
 				}
 			}
 
 			// Test license fields
 			if tt.wantLicenseName != "" || tt.wantLicenseURL != "" {
-				if parser.asyncApi.Info.License == nil {
+				if parser.asyncAPI.Info.License == nil {
 					t.Fatal("License should not be nil")
 				}
-				if parser.asyncApi.Info.License.Name != tt.wantLicenseName {
-					t.Errorf("License.Name = %q, want %q", parser.asyncApi.Info.License.Name, tt.wantLicenseName)
+				if parser.asyncAPI.Info.License.Name != tt.wantLicenseName {
+					t.Errorf("License.Name = %q, want %q", parser.asyncAPI.Info.License.Name, tt.wantLicenseName)
 				}
-				if parser.asyncApi.Info.License.URL != tt.wantLicenseURL {
-					t.Errorf("License.URL = %q, want %q", parser.asyncApi.Info.License.URL, tt.wantLicenseURL)
+				if parser.asyncAPI.Info.License.URL != tt.wantLicenseURL {
+					t.Errorf("License.URL = %q, want %q", parser.asyncAPI.Info.License.URL, tt.wantLicenseURL)
 				}
 			}
 
 			// Test tags
-			if len(parser.asyncApi.Tags) != tt.wantTagsCount {
-				t.Errorf("Tags count = %d, want %d", len(parser.asyncApi.Tags), tt.wantTagsCount)
+			if len(parser.asyncAPI.Tags) != tt.wantTagsCount {
+				t.Errorf("Tags count = %d, want %d", len(parser.asyncAPI.Tags), tt.wantTagsCount)
 			}
 
 			if tt.wantTagsCount > 0 {
-				if parser.asyncApi.Tags[0].Name != "users" {
-					t.Errorf("First tag name = %q, want %q", parser.asyncApi.Tags[0].Name, "users")
+				if parser.asyncAPI.Tags[0].Name != "users" {
+					t.Errorf("First tag name = %q, want %q", parser.asyncAPI.Tags[0].Name, "users")
 				}
-				if parser.asyncApi.Tags[0].Description != "User management operations" {
-					t.Errorf("First tag description = %q, want %q", parser.asyncApi.Tags[0].Description, "User management operations")
+				if parser.asyncAPI.Tags[0].Description != "User management operations" {
+					t.Errorf("First tag description = %q, want %q", parser.asyncAPI.Tags[0].Description, "User management operations")
 				}
 			}
 
 			// Test external docs
 			if tt.wantExternalDocsURL != "" {
-				if parser.asyncApi.ExternalDocs == nil {
+				if parser.asyncAPI.ExternalDocs == nil {
 					t.Fatal("ExternalDocs should not be nil")
 				}
-				if parser.asyncApi.ExternalDocs.URL != tt.wantExternalDocsURL {
-					t.Errorf("ExternalDocs.URL = %q, want %q", parser.asyncApi.ExternalDocs.URL, tt.wantExternalDocsURL)
+				if parser.asyncAPI.ExternalDocs.URL != tt.wantExternalDocsURL {
+					t.Errorf("ExternalDocs.URL = %q, want %q", parser.asyncAPI.ExternalDocs.URL, tt.wantExternalDocsURL)
 				}
 			}
 		})
@@ -222,9 +222,9 @@ func TestValidate(t *testing.T) {
 		{
 			name: "valid parser",
 			setup: func(p *Parser) {
-				p.asyncApi.Info.Title = "Test API"
-				p.asyncApi.Info.Version = "1.0.0"
-				p.asyncApi.Servers["default"] = spec3.Server{
+				p.asyncAPI.Info.Title = "Test API"
+				p.asyncAPI.Info.Version = "1.0.0"
+				p.asyncAPI.Servers["default"] = spec3.Server{
 					Host:     "localhost:4222",
 					Protocol: "nats",
 				}
@@ -234,8 +234,8 @@ func TestValidate(t *testing.T) {
 		{
 			name: "missing title",
 			setup: func(p *Parser) {
-				p.asyncApi.Info.Version = "1.0.0"
-				p.asyncApi.Servers["default"] = spec3.Server{
+				p.asyncAPI.Info.Version = "1.0.0"
+				p.asyncAPI.Servers["default"] = spec3.Server{
 					Host:     "localhost:4222",
 					Protocol: "nats",
 				}
@@ -246,8 +246,8 @@ func TestValidate(t *testing.T) {
 		{
 			name: "missing version",
 			setup: func(p *Parser) {
-				p.asyncApi.Info.Title = "Test API"
-				p.asyncApi.Servers["default"] = spec3.Server{
+				p.asyncAPI.Info.Title = "Test API"
+				p.asyncAPI.Servers["default"] = spec3.Server{
 					Host:     "localhost:4222",
 					Protocol: "nats",
 				}
@@ -258,8 +258,8 @@ func TestValidate(t *testing.T) {
 		{
 			name: "missing server",
 			setup: func(p *Parser) {
-				p.asyncApi.Info.Title = "Test API"
-				p.asyncApi.Info.Version = "1.0.0"
+				p.asyncAPI.Info.Title = "Test API"
+				p.asyncAPI.Info.Version = "1.0.0"
 			},
 			wantErr: true,
 			errMsg:  "missing required server configuration (@url or @host and @protocol)",
@@ -387,7 +387,7 @@ func TestCreateMessage(t *testing.T) {
 
 	parser.createMessage("userCreatedMessage", msgInfo)
 
-	msg, exists := parser.asyncApi.Components.Messages["userCreatedMessage"]
+	msg, exists := parser.asyncAPI.Components.Messages["userCreatedMessage"]
 	if !exists {
 		t.Fatal("Message was not created")
 	}
@@ -414,7 +414,7 @@ func TestCreateChannel(t *testing.T) {
 
 	parser.createChannel("userCreated", "user.created", "userCreatedMessage", params)
 
-	channel, exists := parser.asyncApi.Channels["userCreated"]
+	channel, exists := parser.asyncAPI.Channels["userCreated"]
 	if !exists {
 		t.Fatal("Channel was not created")
 	}

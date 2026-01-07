@@ -90,6 +90,7 @@ func generateSchemaForValue(val reflect.Value) map[string]interface{} {
 		typ = val.Type()
 	}
 
+	//nolint:exhaustive // Only handling common types; default case handles others
 	switch typ.Kind() {
 	case reflect.Struct:
 		return generateObjectSchema(val)
@@ -191,7 +192,9 @@ func generateObjectSchema(val reflect.Value) map[string]interface{} {
 	return schema
 }
 
-// applyFieldTags applies struct field tags to the field schema
+// applyFieldTags applies struct field tags to the field schema.
+//
+//nolint:gocritic // Passing by value is acceptable for this use case
 func applyFieldTags(schema map[string]interface{}, field reflect.StructField) {
 	// Apply format tag
 	if format := field.Tag.Get("format"); format != "" {
@@ -214,7 +217,7 @@ func applyFieldTags(schema map[string]interface{}, field reflect.StructField) {
 	}
 }
 
-// parseExampleValue converts the example string to the appropriate type
+// parseExampleValue converts the example string to the appropriate type.
 func parseExampleValue(example string, schema map[string]interface{}) interface{} {
 	schemaType, ok := schema["type"].(string)
 	if !ok {
@@ -238,11 +241,16 @@ func parseExampleValue(example string, schema map[string]interface{}) interface{
 	return example
 }
 
-// applyValidationRules parses validation rules and applies them to the schema
-// Supports both custom validation format and go-playground/validator tags
+// applyValidationRules parses validation rules and applies them to the schema.
+// Supports both custom validation format and go-playground/validator tags.
+//
+//nolint:gocyclo // Complex validation logic is intentionally centralized
 func applyValidationRules(schema map[string]interface{}, validate string) {
 	rules := strings.Split(validate, ",")
-	schemaType, _ := schema["type"].(string)
+	schemaType, ok := schema["type"].(string)
+	if !ok {
+		schemaType = ""
+	}
 
 	for _, rule := range rules {
 		rule = strings.TrimSpace(rule)
@@ -478,8 +486,8 @@ func applyValidationRules(schema map[string]interface{}, validate string) {
 	}
 }
 
-// convertToType converts a string value to the appropriate type based on schema type
-func convertToType(value string, schemaType string) interface{} {
+// convertToType converts a string value to the appropriate type based on schema type.
+func convertToType(value, schemaType string) interface{} {
 	switch schemaType {
 	case "integer":
 		if intVal, err := strconv.ParseInt(value, 10, 64); err == nil {
@@ -497,7 +505,7 @@ func convertToType(value string, schemaType string) interface{} {
 	return value
 }
 
-// escapeRegex escapes special regex characters in a string
+// escapeRegex escapes special regex characters in a string.
 func escapeRegex(s string) string {
 	special := []string{".", "+", "*", "?", "^", "$", "(", ")", "[", "]", "{", "}", "|", "\\"}
 	result := s
@@ -508,9 +516,7 @@ func escapeRegex(s string) string {
 }
 
 func generateArraySchema(val reflect.Value) map[string]interface{} {
-	itemsSchema := map[string]interface{}{
-		"type": "object",
-	}
+	var itemsSchema map[string]interface{}
 
 	// If array has elements, use the first element to generate schema
 	if val.Len() > 0 {
@@ -533,7 +539,7 @@ func generateArraySchema(val reflect.Value) map[string]interface{} {
 	}
 }
 
-func generateMapSchema(val reflect.Value) map[string]interface{} {
+func generateMapSchema(_ reflect.Value) map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
 		"additionalProperties": map[string]interface{}{
@@ -548,6 +554,7 @@ func generateSchemaForType(typ reflect.Type) map[string]interface{} {
 		typ = typ.Elem()
 	}
 
+	//nolint:exhaustive // Only handling common types; default case handles others
 	switch typ.Kind() {
 	case reflect.String:
 		return map[string]interface{}{

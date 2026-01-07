@@ -134,11 +134,9 @@ type TestEvent struct {
 		t.Fatalf("Failed to parse test file: %v", err)
 	}
 
-	pkg := &ast.Package{
-		Name: "testpkg",
-		Files: map[string]*ast.File{
-			"test.go": file,
-		},
+	tc, err := NewTypeChecker(fset, []*ast.File{file}, "testpkg")
+	if err != nil {
+		t.Fatalf("Failed to create type checker: %v", err)
 	}
 
 	tests := []struct {
@@ -187,7 +185,7 @@ type TestEvent struct {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			op := NewOperation()
-			err := op.ParseComment(tt.comment, pkg)
+			err := op.ParseComment(tt.comment, tc)
 			if err != nil {
 				t.Errorf("ParseComment() error = %v", err)
 			}
@@ -273,16 +271,17 @@ func TestParseNameWithParameters(t *testing.T) {
 func TestParsePayloadWithInvalidType(t *testing.T) {
 	op := NewOperation()
 
-	// Create empty package
-	pkg := &ast.Package{
-		Name:  "testpkg",
-		Files: map[string]*ast.File{},
+	// Create empty type checker
+	fset := token.NewFileSet()
+	tc, err := NewTypeChecker(fset, []*ast.File{}, "testpkg")
+	if err != nil {
+		t.Fatalf("Failed to create type checker: %v", err)
 	}
 
 	// Note: GetByNameType returns struct{}{} for unknown types instead of nil
 	// So ParsePayload will succeed but with an empty struct
 	// This test documents the current behavior
-	err := op.ParsePayload("NonExistentType", pkg)
+	err = op.ParsePayload("NonExistentType", tc)
 
 	// The function returns nil error because GetByNameType always returns a value
 	if err != nil {
@@ -298,15 +297,16 @@ func TestParsePayloadWithInvalidType(t *testing.T) {
 func TestParseResponseWithInvalidType(t *testing.T) {
 	op := NewOperation()
 
-	// Create empty package
-	pkg := &ast.Package{
-		Name:  "testpkg",
-		Files: map[string]*ast.File{},
+	// Create empty type checker
+	fset := token.NewFileSet()
+	tc, err := NewTypeChecker(fset, []*ast.File{}, "testpkg")
+	if err != nil {
+		t.Fatalf("Failed to create type checker: %v", err)
 	}
 
 	// Note: GetByNameType returns struct{}{} for unknown types instead of nil
 	// So ParseResponse will succeed but with an empty struct
-	err := op.ParseResponse("NonExistentType", pkg)
+	err = op.ParseResponse("NonExistentType", tc)
 
 	// The function returns nil error because GetByNameType always returns a value
 	if err != nil {
