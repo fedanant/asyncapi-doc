@@ -9,7 +9,12 @@ import (
 	"github.com/fedanant/asyncapi-doc/internal/asyncapi"
 )
 
-const version = "0.1.0"
+// Build information set via ldflags
+var (
+	Version   = "dev"
+	BuildTime = "unknown"
+	GitCommit = "unknown"
+)
 
 var srcFolder = "."
 var outFile = "./api.yaml"
@@ -33,8 +38,10 @@ func main() {
 	switch command {
 	case "generate":
 		generate()
-	case "version":
-		fmt.Printf("asyncapi-doc version %s\n", version)
+	case "version", "--version", "-v":
+		fmt.Printf("asyncapi-doc version %s\n", Version)
+		fmt.Printf("  Build time: %s\n", BuildTime)
+		fmt.Printf("  Git commit: %s\n", GitCommit)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %s\n\n", command)
 		printUsage()
@@ -97,5 +104,5 @@ Examples:
   asyncapi-doc generate -output ./asyncapi.yaml ./example/nats
 
 Use "asyncapi-doc <command> -h" for more information about a command.
-`, version)
+`, Version)
 }

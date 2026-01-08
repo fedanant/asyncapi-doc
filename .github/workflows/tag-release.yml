@@ -1,0 +1,135 @@
+name: Tag Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Trigger on semantic version tags (e.g., v1.0.0, v2.1.3)
+
+permissions:
+  contents: write
+
+jobs:
+  validate-tag:
+    name: Validate Version Tag
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.validate.outputs.version }}
+      is_prerelease: ${{ steps.validate.outputs.is_prerelease }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate semantic version tag
+        id: validate
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          echo "Validating tag: $TAG_NAME"
+
+          # Validate semantic version format (v1.2.3 or v1.2.3-beta.1)
+          if [[ ! $TAG_NAME =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+            echo "❌ Invalid version tag format: $TAG_NAME"
+            echo "Expected format: v1.2.3 or v1.2.3-beta.1"
+            exit 1
+          fi
+
+          echo "✓ Valid semantic version tag"
+          echo "version=$TAG_NAME" >> $GITHUB_OUTPUT
+
+          # Check if this is a pre-release
+          if [[ $TAG_NAME =~ -[a-zA-Z] ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+            echo "This is a pre-release version"
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+            echo "This is a stable release"
+          fi
+
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: validate-tag
+    outputs:
+      release_id: ${{ steps.create_release.outputs.id }}
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          VERSION="${{ needs.validate-tag.outputs.version }}"
+
+          # Get previous tag for comparison
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+
+          if [ -z "$PREV_TAG" ]; then
+            echo "## Initial Release" > release_notes.md
+            echo "" >> release_notes.md
+            echo "This is the first release of asyncapi-doc." >> release_notes.md
+          else
+            echo "## What's Changed" > release_notes.md
+            echo "" >> release_notes.md
+
+            # Generate changelog from commits
+            git log --pretty=format:"- %s (%h)" ${PREV_TAG}..HEAD >> release_notes.md
+
+            echo "" >> release_notes.md
+            echo "" >> release_notes.md
+            echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREV_TAG}...${VERSION}" >> release_notes.md
+          fi
+
+          echo "" >> release_notes.md
+          echo "---" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "📦 **Binaries will be uploaded shortly...**" >> release_notes.md
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const releaseNotes = fs.readFileSync('release_notes.md', 'utf8');
+
+            const response = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: '${{ needs.validate-tag.outputs.version }}',
+              name: '${{ needs.validate-tag.outputs.version }}',
+              body: releaseNotes,
+              draft: false,
+              prerelease: ${{ needs.validate-tag.outputs.is_prerelease == 'true' }}
+            });
+
+            core.setOutput('id', response.data.id);
+            core.setOutput('upload_url', response.data.upload_url);
+
+            console.log('✓ Release created:', response.data.html_url);
+
+  trigger-build:
+    name: Trigger Release Build
+    runs-on: ubuntu-latest
+    needs: [validate-tag, create-release]
+
+    steps:
+      - name: Trigger release workflow
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const response = await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'release.yml',
+              ref: context.ref,
+            });
+
+            console.log('✓ Release build workflow triggered');
+            console.log('Release ID: ${{ needs.create-release.outputs.release_id }}');
+            console.log('View release: https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate-tag.outputs.version }}');

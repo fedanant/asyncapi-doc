@@ -1,6 +1,9 @@
 name: Release
 
 on:
+  push:
+    tags:
+      - "v*.*.*"
   release:
     types: [created]
   workflow_dispatch:
@@ -48,6 +51,21 @@ jobs:
           if [ "${{ github.event_name }}" = "release" ]; then
             echo "version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
             echo "upload_url=${{ github.event.release.upload_url }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref_type }}" = "tag" ]; then
+            # Extract version from tag ref
+            VERSION=${GITHUB_REF#refs/tags/}
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+            # Get release info from the tag
+            RELEASE_ID=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              "https://api.github.com/repos/${{ github.repository }}/releases/tags/$VERSION" | \
+              jq -r '.id')
+
+            UPLOAD_URL=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              "https://api.github.com/repos/${{ github.repository }}/releases/tags/$VERSION" | \
+              jq -r '.upload_url')
+
+            echo "upload_url=$UPLOAD_URL" >> $GITHUB_OUTPUT
           else
             echo "version=dev" >> $GITHUB_OUTPUT
           fi
@@ -80,6 +98,50 @@ jobs:
             tar czf "${ARCHIVE_NAME}.tar.gz" "${BINARY_NAME}"
             echo "archive=${ARCHIVE_NAME}.tar.gz" >> $GITHUB_ENV
           fi
+
+      - name: Smoke test binary
+        run: |
+          BINARY_NAME="asyncapi-doc"
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            BINARY_NAME="${BINARY_NAME}.exe"
+          fi
+
+          echo "Running smoke tests on ${BINARY_NAME}..."
+
+          # Test 1: Check if binary exists and is executable
+          if [ ! -f "${BINARY_NAME}" ]; then
+            echo "❌ Binary not found: ${BINARY_NAME}"
+            exit 1
+          fi
+
+          chmod +x "${BINARY_NAME}" 2>/dev/null || true
+
+          # Test 2: Run version command
+          echo "Testing version command..."
+          ./${BINARY_NAME} version || {
+            echo "❌ Version command failed"
+            exit 1
+          }
+
+          # Test 3: Run help (should show usage)
+          echo "Testing help output..."
+          ./${BINARY_NAME} 2>&1 | grep -q "asyncapi-doc" || {
+            echo "❌ Help output validation failed"
+            exit 1
+          }
+
+          # Test 4: Verify binary is statically linked (Linux only)
+          if [ "${{ matrix.goos }}" = "linux" ]; then
+            if command -v ldd > /dev/null; then
+              if ldd "${BINARY_NAME}" 2>&1 | grep -q "not a dynamic executable"; then
+                echo "✓ Binary is statically linked"
+              else
+                echo "⚠ Binary appears to be dynamically linked"
+              fi
+            fi
+          fi
+
+          echo "✓ All smoke tests passed for ${{ matrix.goos }}-${{ matrix.goarch }}"
 
       - name: Generate checksums
         run: |
@@ -132,72 +194,31 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Generate changelog
+      - name: Generate enhanced release notes
         id: changelog
         run: |
-          if [ -f "CHANGELOG.md" ]; then
-            echo "Using existing CHANGELOG.md"
-          else
-            echo "## What's Changed" > changelog.txt
-            git log --pretty=format:"- %s (%h)" $(git describe --tags --abbrev=0 HEAD^)..HEAD >> changelog.txt
-            echo "" >> changelog.txt
-            echo "" >> changelog.txt
-            echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/$(git describe --tags --abbrev=0 HEAD^)...${{ github.event.release.tag_name }}" >> changelog.txt
-          fi
+          # Make script executable
+          chmod +x .github/scripts/generate-release-notes.sh
+
+          # Get previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+
+          # Generate release notes
+          .github/scripts/generate-release-notes.sh "${{ github.event.release.tag_name }}" "$PREV_TAG"
+
+          # Copy to changelog.txt for the next step
+          cp release_notes.md changelog.txt
 
       - name: Update release notes
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
-            let changelog = '';
-
-            if (fs.existsSync('changelog.txt')) {
-              changelog = fs.readFileSync('changelog.txt', 'utf8');
-            }
-
-            const downloads = `
-            ## Downloads
-
-            ### Linux
-            - [asyncapi-doc-${{ github.event.release.tag_name }}-linux-amd64.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ github.event.release.tag_name }}/asyncapi-doc-${{ github.event.release.tag_name }}-linux-amd64.tar.gz)
-            - [asyncapi-doc-${{ github.event.release.tag_name }}-linux-arm64.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ github.event.release.tag_name }}/asyncapi-doc-${{ github.event.release.tag_name }}-linux-arm64.tar.gz)
-
-            ### macOS
-            - [asyncapi-doc-${{ github.event.release.tag_name }}-darwin-amd64.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ github.event.release.tag_name }}/asyncapi-doc-${{ github.event.release.tag_name }}-darwin-amd64.tar.gz)
-            - [asyncapi-doc-${{ github.event.release.tag_name }}-darwin-arm64.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ github.event.release.tag_name }}/asyncapi-doc-${{ github.event.release.tag_name }}-darwin-arm64.tar.gz)
-
-            ### Windows
-            - [asyncapi-doc-${{ github.event.release.tag_name }}-windows-amd64.zip](https://github.com/${{ github.repository }}/releases/download/${{ github.event.release.tag_name }}/asyncapi-doc-${{ github.event.release.tag_name }}-windows-amd64.zip)
-            - [asyncapi-doc-${{ github.event.release.tag_name }}-windows-arm64.zip](https://github.com/${{ github.repository }}/releases/download/${{ github.event.release.tag_name }}/asyncapi-doc-${{ github.event.release.tag_name }}-windows-arm64.zip)
-
-            ### Checksums
-            SHA256 checksums are available for all downloads (*.sha256 files).
-
-            ## Installation
-
-            ### Linux/macOS
-            \`\`\`bash
-            # Download and extract
-            tar -xzf asyncapi-doc-${{ github.event.release.tag_name }}-<os>-<arch>.tar.gz
-
-            # Make executable and move to PATH
-            chmod +x asyncapi-doc
-            sudo mv asyncapi-doc /usr/local/bin/
-            \`\`\`
-
-            ### Windows
-            \`\`\`powershell
-            # Extract the ZIP file
-            # Add the directory to your PATH or move asyncapi-doc.exe to a directory in your PATH
-            \`\`\`
-            `;
-
-            const body = changelog + '\n\n' + downloads;
+            const changelog = fs.readFileSync('changelog.txt', 'utf8');
 
             await github.rest.repos.updateRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
               release_id: ${{ github.event.release.id }},
-              body: body
+              body: changelog
             });

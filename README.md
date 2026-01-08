@@ -29,10 +29,33 @@ AsyncAPI Generator is a code-to-spec tool that automatically generates AsyncAPI 
 
 ## Installation
 
-### Using Go install (Recommended)
+### Quick Install (Linux/macOS)
+
+Install the latest version with a single command:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/fedanant/asyncapi-doc/main/install.sh | bash
+```
+
+### Download Pre-built Binaries
+
+Download the latest release for your platform from the [releases page](https://github.com/fedanant/asyncapi-doc/releases/latest).
+
+Available platforms:
+- Linux (amd64, arm64)
+- macOS (amd64, arm64)
+- Windows (amd64, arm64)
+
+### Using Go install
 
 ```bash
 go install github.com/fedanant/asyncapi-doc/cmd/asyncapi-doc@latest
+```
+
+### Verify Installation
+
+```bash
+asyncapi-doc version
 ```
 
 ## Quick Start
