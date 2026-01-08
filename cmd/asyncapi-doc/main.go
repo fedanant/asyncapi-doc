@@ -9,7 +9,7 @@ import (
 	"github.com/fedanant/asyncapi-doc/internal/asyncapi"
 )
 
-// Build information set via ldflags
+// Build information set via ldflags.
 var (
 	Version   = "dev"
 	BuildTime = "unknown"
