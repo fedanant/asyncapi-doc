@@ -3,7 +3,7 @@ name: Tag Release
 on:
   push:
     tags:
-      - 'v*.*.*'  # Trigger on semantic version tags (e.g., v1.0.0, v2.1.3)
+      - "v*.*.*" # Trigger on semantic version tags (e.g., v1.0.0, v2.1.3)
 
 permissions:
   contents: write
@@ -113,23 +113,146 @@ jobs:
 
             console.log('✓ Release created:', response.data.html_url);
 
-  trigger-build:
-    name: Trigger Release Build
+  build:
+    name: Build and Upload Release Assets
     runs-on: ubuntu-latest
     needs: [validate-tag, create-release]
 
-    steps:
-      - name: Trigger release workflow
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const response = await github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'release.yml',
-              ref: context.ref,
-            });
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+          - goos: windows
+            goarch: amd64
+          - goos: windows
+            goarch: arm64
 
-            console.log('✓ Release build workflow triggered');
-            console.log('Release ID: ${{ needs.create-release.outputs.release_id }}');
-            console.log('View release: https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate-tag.outputs.version }}');
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+          cache: true
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          VERSION="${{ needs.validate-tag.outputs.version }}"
+          BUILD_TIME=$(date -u '+%Y-%m-%d_%H:%M:%S')
+          GIT_COMMIT=$(git rev-parse --short HEAD)
+
+          BINARY_NAME="asyncapi-doc"
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            BINARY_NAME="${BINARY_NAME}.exe"
+          fi
+
+          LDFLAGS="-s -w -X main.Version=${VERSION} -X main.BuildTime=${BUILD_TIME} -X main.GitCommit=${GIT_COMMIT}"
+
+          go build -ldflags "${LDFLAGS}" -o "${BINARY_NAME}" ./cmd/asyncapi-doc
+
+          # Create archive
+          ARCHIVE_NAME="asyncapi-doc-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}"
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            zip "${ARCHIVE_NAME}.zip" "${BINARY_NAME}"
+            echo "archive=${ARCHIVE_NAME}.zip" >> $GITHUB_ENV
+          else
+            tar czf "${ARCHIVE_NAME}.tar.gz" "${BINARY_NAME}"
+            echo "archive=${ARCHIVE_NAME}.tar.gz" >> $GITHUB_ENV
+          fi
+
+      - name: Smoke test binary
+        run: |
+          BINARY_NAME="asyncapi-doc"
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            BINARY_NAME="${BINARY_NAME}.exe"
+          fi
+
+          echo "Running smoke tests on ${BINARY_NAME} (${{ matrix.goos }}-${{ matrix.goarch }})..."
+
+          # Test 1: Check if binary exists
+          if [ ! -f "${BINARY_NAME}" ]; then
+            echo "❌ Binary not found: ${BINARY_NAME}"
+            exit 1
+          fi
+
+          echo "✓ Binary file exists"
+
+          # Test 2: Check binary size (should be > 1MB for Go binaries)
+          SIZE=$(stat -c%s "${BINARY_NAME}" 2>/dev/null || stat -f%z "${BINARY_NAME}" 2>/dev/null || echo "0")
+          if [ "$SIZE" -lt 1000000 ]; then
+            echo "❌ Binary size too small: ${SIZE} bytes"
+            exit 1
+          fi
+
+          echo "✓ Binary size is valid: ${SIZE} bytes"
+
+          # Test 3: Verify it's actually a binary file
+          if file "${BINARY_NAME}" | grep -q "executable"; then
+            echo "✓ File is an executable binary"
+          elif file "${BINARY_NAME}" | grep -q "PE32"; then
+            echo "✓ File is a Windows executable"
+          else
+            echo "⚠ Warning: Unexpected file type"
+            file "${BINARY_NAME}"
+          fi
+
+          # Test 4: Only run the binary on matching platform
+          if [ "${{ matrix.goos }}" = "linux" ] && [ "${{ matrix.goarch }}" = "amd64" ]; then
+            chmod +x "${BINARY_NAME}"
+            echo "Testing version command..."
+            ./${BINARY_NAME} version || {
+              echo "❌ Version command failed"
+              exit 1
+            }
+
+            echo "Testing help output..."
+            ./${BINARY_NAME} 2>&1 | grep -q "asyncapi-doc" || {
+              echo "❌ Help output validation failed"
+              exit 1
+            }
+
+            echo "✓ Binary execution tests passed"
+          else
+            echo "⏭ Skipping execution tests for ${{ matrix.goos }}-${{ matrix.goarch }} (cross-compiled)"
+          fi
+
+          echo "✓ All smoke tests passed for ${{ matrix.goos }}-${{ matrix.goarch }}"
+
+      - name: Generate checksums
+        run: |
+          sha256sum "${{ env.archive }}" > "${{ env.archive }}.sha256"
+
+      - name: Upload release asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./${{ env.archive }}
+          asset_name: ${{ env.archive }}
+          asset_content_type: application/octet-stream
+
+      - name: Upload checksum
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./${{ env.archive }}.sha256
+          asset_name: ${{ env.archive }}.sha256
+          asset_content_type: text/plain
