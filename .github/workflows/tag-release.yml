@@ -165,35 +165,31 @@ jobs:
 
           go build -ldflags "${LDFLAGS}" -o "${BINARY_NAME}" ./cmd/asyncapi-doc
 
-          # Create archive
-          ARCHIVE_NAME="asyncapi-doc-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}"
+          # Rename binary to include version and platform
+          FINAL_NAME="asyncapi-doc-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}"
           if [ "${{ matrix.goos }}" = "windows" ]; then
-            zip "${ARCHIVE_NAME}.zip" "${BINARY_NAME}"
-            echo "archive=${ARCHIVE_NAME}.zip" >> $GITHUB_ENV
-          else
-            tar czf "${ARCHIVE_NAME}.tar.gz" "${BINARY_NAME}"
-            echo "archive=${ARCHIVE_NAME}.tar.gz" >> $GITHUB_ENV
+            FINAL_NAME="${FINAL_NAME}.exe"
           fi
+
+          mv "${BINARY_NAME}" "${FINAL_NAME}"
+          echo "binary=${FINAL_NAME}" >> $GITHUB_ENV
 
       - name: Smoke test binary
         run: |
-          BINARY_NAME="asyncapi-doc"
-          if [ "${{ matrix.goos }}" = "windows" ]; then
-            BINARY_NAME="${BINARY_NAME}.exe"
-          fi
+          BINARY_FILE="${{ env.binary }}"
 
-          echo "Running smoke tests on ${BINARY_NAME} (${{ matrix.goos }}-${{ matrix.goarch }})..."
+          echo "Running smoke tests on ${BINARY_FILE} (${{ matrix.goos }}-${{ matrix.goarch }})..."
 
           # Test 1: Check if binary exists
-          if [ ! -f "${BINARY_NAME}" ]; then
-            echo "❌ Binary not found: ${BINARY_NAME}"
+          if [ ! -f "${BINARY_FILE}" ]; then
+            echo "❌ Binary not found: ${BINARY_FILE}"
             exit 1
           fi
 
           echo "✓ Binary file exists"
 
           # Test 2: Check binary size (should be > 1MB for Go binaries)
-          SIZE=$(stat -c%s "${BINARY_NAME}" 2>/dev/null || stat -f%z "${BINARY_NAME}" 2>/dev/null || echo "0")
+          SIZE=$(stat -c%s "${BINARY_FILE}" 2>/dev/null || stat -f%z "${BINARY_FILE}" 2>/dev/null || echo "0")
           if [ "$SIZE" -lt 1000000 ]; then
             echo "❌ Binary size too small: ${SIZE} bytes"
             exit 1
@@ -202,13 +198,13 @@ jobs:
           echo "✓ Binary size is valid: ${SIZE} bytes"
 
           # Test 3: Verify it's actually a binary file
-          if file "${BINARY_NAME}" | grep -q "executable"; then
+          if file "${BINARY_FILE}" | grep -q "executable"; then
             echo "✓ File is an executable binary"
-          elif file "${BINARY_NAME}" | grep -q "PE32"; then
+          elif file "${BINARY_FILE}" | grep -q "PE32"; then
             echo "✓ File is a Windows executable"
           else
             echo "⚠ Warning: Unexpected file type"
-            file "${BINARY_NAME}"
+            file "${BINARY_FILE}"
           fi
 
           # Test 4: Only run the binary on native platform (Linux amd64)
@@ -217,15 +213,15 @@ jobs:
           RUNNER_ARCH="amd64"
 
           if [ "${{ matrix.goos }}" = "$RUNNER_OS" ] && [ "${{ matrix.goarch }}" = "$RUNNER_ARCH" ]; then
-            chmod +x "${BINARY_NAME}"
+            chmod +x "${BINARY_FILE}"
             echo "Testing version command..."
-            ./${BINARY_NAME} version || {
+            ./${BINARY_FILE} version || {
               echo "❌ Version command failed"
               exit 1
             }
 
             echo "Testing help output..."
-            ./${BINARY_NAME} 2>&1 | grep -q "asyncapi-doc" || {
+            ./${BINARY_FILE} 2>&1 | grep -q "asyncapi-doc" || {
               echo "❌ Help output validation failed"
               exit 1
             }
@@ -237,26 +233,12 @@ jobs:
 
           echo "✓ All smoke tests passed for ${{ matrix.goos }}-${{ matrix.goarch }}"
 
-      - name: Generate checksums
-        run: |
-          sha256sum "${{ env.archive }}" > "${{ env.archive }}.sha256"
-
       - name: Upload release asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./${{ env.archive }}
-          asset_name: ${{ env.archive }}
+          asset_path: ./${{ env.binary }}
+          asset_name: ${{ env.binary }}
           asset_content_type: application/octet-stream
-
-      - name: Upload checksum
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./${{ env.archive }}.sha256
-          asset_name: ${{ env.archive }}.sha256
-          asset_content_type: text/plain
