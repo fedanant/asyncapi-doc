@@ -1,0 +1,15 @@
+# Generated AsyncAPI spec
+asyncapi.yaml
+
+# Binaries
+bin/
+
+# Go test coverage
+coverage.out
+coverage.html
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo

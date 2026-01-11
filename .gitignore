@@ -1,0 +1,57 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Go workspace file
+go.work
+
+# Dependency directories
+vendor/
+
+# Build output
+bin/
+dist/
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Generated files
+output/
+*.log
+
+# Coverage files
+coverage/
+coverage.out
+coverage.html
+coverage.xml
+*.coverprofile
+
+# Linter cache
+.golangci-cache/
+
+# Config files (may contain sensitive data)
+*.local.json
+.env
+
+.worktrees/
+.claude/
+.auto-claude/
+.claude_settings.json
+.actrc

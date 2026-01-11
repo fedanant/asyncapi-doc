@@ -1,0 +1,224 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  release:
+    types: [created]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build:
+    name: Build and Upload Release Assets
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+          - goos: windows
+            goarch: amd64
+          - goos: windows
+            goarch: arm64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+          cache: true
+
+      - name: Get release info
+        id: release_info
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+            echo "upload_url=${{ github.event.release.upload_url }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref_type }}" = "tag" ]; then
+            # Extract version from tag ref
+            VERSION=${GITHUB_REF#refs/tags/}
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+            # Get release info from the tag
+            RELEASE_ID=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              "https://api.github.com/repos/${{ github.repository }}/releases/tags/$VERSION" | \
+              jq -r '.id')
+
+            UPLOAD_URL=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              "https://api.github.com/repos/${{ github.repository }}/releases/tags/$VERSION" | \
+              jq -r '.upload_url')
+
+            echo "upload_url=$UPLOAD_URL" >> $GITHUB_OUTPUT
+          else
+            echo "version=dev" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          VERSION="${{ steps.release_info.outputs.version }}"
+          BUILD_TIME=$(date -u '+%Y-%m-%d_%H:%M:%S')
+          GIT_COMMIT=$(git rev-parse --short HEAD)
+
+          BINARY_NAME="asyncapi-doc"
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            BINARY_NAME="${BINARY_NAME}.exe"
+          fi
+
+          LDFLAGS="-s -w -X main.Version=${VERSION} -X main.BuildTime=${BUILD_TIME} -X main.GitCommit=${GIT_COMMIT}"
+
+          go build -ldflags "${LDFLAGS}" -o "${BINARY_NAME}" ./cmd/asyncapi-doc
+
+          # Create archive
+          ARCHIVE_NAME="asyncapi-doc-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}"
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            zip "${ARCHIVE_NAME}.zip" "${BINARY_NAME}"
+            echo "archive=${ARCHIVE_NAME}.zip" >> $GITHUB_ENV
+          else
+            tar czf "${ARCHIVE_NAME}.tar.gz" "${BINARY_NAME}"
+            echo "archive=${ARCHIVE_NAME}.tar.gz" >> $GITHUB_ENV
+          fi
+
+      - name: Smoke test binary
+        run: |
+          BINARY_NAME="asyncapi-doc"
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            BINARY_NAME="${BINARY_NAME}.exe"
+          fi
+
+          echo "Running smoke tests on ${BINARY_NAME}..."
+
+          # Test 1: Check if binary exists and is executable
+          if [ ! -f "${BINARY_NAME}" ]; then
+            echo "❌ Binary not found: ${BINARY_NAME}"
+            exit 1
+          fi
+
+          chmod +x "${BINARY_NAME}" 2>/dev/null || true
+
+          # Test 2: Run version command
+          echo "Testing version command..."
+          ./${BINARY_NAME} version || {
+            echo "❌ Version command failed"
+            exit 1
+          }
+
+          # Test 3: Run help (should show usage)
+          echo "Testing help output..."
+          ./${BINARY_NAME} 2>&1 | grep -q "asyncapi-doc" || {
+            echo "❌ Help output validation failed"
+            exit 1
+          }
+
+          # Test 4: Verify binary is statically linked (Linux only)
+          if [ "${{ matrix.goos }}" = "linux" ]; then
+            if command -v ldd > /dev/null; then
+              if ldd "${BINARY_NAME}" 2>&1 | grep -q "not a dynamic executable"; then
+                echo "✓ Binary is statically linked"
+              else
+                echo "⚠ Binary appears to be dynamically linked"
+              fi
+            fi
+          fi
+
+          echo "✓ All smoke tests passed for ${{ matrix.goos }}-${{ matrix.goarch }}"
+
+      - name: Generate checksums
+        run: |
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            sha256sum "${{ env.archive }}" > "${{ env.archive }}.sha256"
+          else
+            sha256sum "${{ env.archive }}" > "${{ env.archive }}.sha256"
+          fi
+
+      - name: Upload release asset
+        if: github.event_name == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.release_info.outputs.upload_url }}
+          asset_path: ./${{ env.archive }}
+          asset_name: ${{ env.archive }}
+          asset_content_type: application/octet-stream
+
+      - name: Upload checksum
+        if: github.event_name == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.release_info.outputs.upload_url }}
+          asset_path: ./${{ env.archive }}.sha256
+          asset_name: ${{ env.archive }}.sha256
+          asset_content_type: text/plain
+
+      - name: Upload artifact (for workflow_dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: asyncapi-doc-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: |
+            ${{ env.archive }}
+            ${{ env.archive }}.sha256
+
+  create-release-notes:
+    name: Create Release Notes
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    needs: build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate enhanced release notes
+        id: changelog
+        run: |
+          # Make script executable
+          chmod +x .github/scripts/generate-release-notes.sh
+
+          # Get previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+
+          # Generate release notes
+          .github/scripts/generate-release-notes.sh "${{ github.event.release.tag_name }}" "$PREV_TAG"
+
+          # Copy to changelog.txt for the next step
+          cp release_notes.md changelog.txt
+
+      - name: Update release notes
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const changelog = fs.readFileSync('changelog.txt', 'utf8');
+
+            await github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: ${{ github.event.release.id }},
+              body: changelog
+            });
