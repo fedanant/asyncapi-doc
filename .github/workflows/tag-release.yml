@@ -211,8 +211,12 @@ jobs:
             file "${BINARY_NAME}"
           fi
 
-          # Test 4: Only run the binary on matching platform
-          if [ "${{ matrix.goos }}" = "linux" ] && [ "${{ matrix.goarch }}" = "amd64" ]; then
+          # Test 4: Only run the binary on native platform (Linux amd64)
+          # Skip execution for cross-compiled binaries (macOS, Windows, ARM)
+          RUNNER_OS="linux"
+          RUNNER_ARCH="amd64"
+
+          if [ "${{ matrix.goos }}" = "$RUNNER_OS" ] && [ "${{ matrix.goarch }}" = "$RUNNER_ARCH" ]; then
             chmod +x "${BINARY_NAME}"
             echo "Testing version command..."
             ./${BINARY_NAME} version || {
@@ -228,7 +232,7 @@ jobs:
 
             echo "✓ Binary execution tests passed"
           else
-            echo "⏭ Skipping execution tests for ${{ matrix.goos }}-${{ matrix.goarch }} (cross-compiled)"
+            echo "⏭ Skipping execution tests for ${{ matrix.goos }}-${{ matrix.goarch }} (cross-compiled, runner is ${RUNNER_OS}-${RUNNER_ARCH})"
           fi
 
           echo "✓ All smoke tests passed for ${{ matrix.goos }}-${{ matrix.goarch }}"
