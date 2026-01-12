@@ -112,6 +112,18 @@ func (s *Service) SubscribeToOrders(ctx context.Context) error {
     // Subscribe logic
     return nil
 }
+
+// HandleGetUser handles user lookup requests with reply (request-reply pattern)
+// @type sub
+// @name user.get
+// @summary Get User Request
+// @description Handles user lookup requests and sends back user data
+// @payload GetUserRequest
+// @response GetUserResponse
+func (s *Service) HandleGetUser(ctx context.Context) {
+    // Subscribe to requests and reply with GetUserResponse
+    // @response annotation automatically enables request-reply pattern
+}
 ```
 
 Define your event types with JSON tags:
@@ -130,9 +142,22 @@ type OrderPlacedEvent struct {
     TotalPrice float64   `json:"totalPrice"`
     PlacedAt   time.Time `json:"placedAt"`
 }
+
+type GetUserRequest struct {
+    UserID string `json:"userId"`
+}
+
+type GetUserResponse struct {
+    UserID    string `json:"userId"`
+    Email     string `json:"email"`
+    Username  string `json:"username"`
+    Found     bool   `json:"found"`
+}
 ```
 
-> **💡 Tip:** See the [AsyncAPI Annotations Reference](#asyncapi-annotations-reference) section below for complete documentation of all available annotations.
+> **💡 Tips:** 
+> - Use `@response` to automatically enable request-reply pattern (no need for `@type request`)
+> - See the [AsyncAPI Annotations Reference](#asyncapi-annotations-reference) section below for complete documentation of all available annotations.
 
 ### 2. Generate AsyncAPI specification
 
