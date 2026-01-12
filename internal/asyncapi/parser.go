@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	// Service-level annotations (camelCase)
+	// Service-level annotations (camelCase).
 	titleAttr            = "@title"
 	urlAttr              = "@url"
 	hostAttr             = "@host"
@@ -25,7 +25,7 @@ const (
 	externalDocsDescAttr = "@externaldocs.description"
 	externalDocsURLAttr  = "@externaldocs.url"
 
-	// Server annotations (camelCase in user code, lowercase for internal matching)
+	// Server annotations (camelCase in user code, lowercase for internal matching).
 	protocolAttr               = "@protocol"
 	protocolVersionAttr        = "@protocolversion"
 	pathnameAttr               = "@pathname"
@@ -40,7 +40,7 @@ const (
 	serverSecurityAttr         = "@server.security"
 	serverBindingAttr          = "@server.binding"
 
-	// Operation annotations (camelCase in user code, lowercase for internal matching)
+	// Operation annotations (camelCase in user code, lowercase for internal matching).
 	typeAttr                      = "@type"
 	nameAttr                      = "@name"
 	descriptionAttr               = "@description"
@@ -54,7 +54,7 @@ const (
 	deprecatedAttr                = "@deprecated"
 	traitAttr                     = "@trait"
 
-	// Message annotations (camelCase in user code, lowercase for internal matching)
+	// Message annotations (camelCase in user code, lowercase for internal matching).
 	messageContentTypeAttr   = "@message.contenttype"
 	messageTitleAttr         = "@message.title"
 	messageNameAttr          = "@message.name"
@@ -63,12 +63,12 @@ const (
 	messageCorrelationIDAttr = "@message.correlationid"
 	messageExamplesAttr      = "@message.examples"
 
-	// Channel annotations (camelCase)
+	// Channel annotations (camelCase).
 	channelTitleAttr       = "@channel.title"
 	channelDescriptionAttr = "@channel.description"
 	channelAddressAttr     = "@channel.address"
 
-	// Binding annotations (protocol-specific, camelCase in user code, lowercase for internal matching)
+	// Binding annotations (protocol-specific, camelCase in user code, lowercase for internal matching).
 	bindingNATSQueueAttr         = "@binding.nats.queue"
 	bindingNATSDeliverPolicyAttr = "@binding.nats.deliverpolicy"
 	bindingAMQPExchangeAttr      = "@binding.amqp.exchange"
@@ -577,8 +577,7 @@ func (p *Parser) MarshalYAML() ([]byte, error) {
 	return p.asyncAPI.MarshalYAML()
 }
 
-// parseServerVariable parses server variable annotation in format:
-// "varName enum=val1,val2 default=val1 description=Variable description"
+// "varName enum=val1,val2 default=val1 description=Variable description".
 func parseServerVariable(value string, variables map[string]spec3.ServerVar) {
 	parts := strings.Fields(value)
 	if len(parts) == 0 {
@@ -615,8 +614,7 @@ done:
 	variables[varName] = variable
 }
 
-// parseServerBinding parses server binding annotation in format:
-// "protocol.key value" e.g., "nats.queue myQueue"
+// "protocol.key value" e.g., "nats.queue myQueue".
 func parseServerBinding(value string, bindings map[string]interface{}) {
 	parts := strings.Fields(value)
 	if len(parts) < 2 {
@@ -638,6 +636,9 @@ func parseServerBinding(value string, bindings map[string]interface{}) {
 		bindings[protocol] = make(map[string]interface{})
 	}
 
-	protocolBinding := bindings[protocol].(map[string]interface{})
+	protocolBinding, ok := bindings[protocol].(map[string]interface{})
+	if !ok {
+		return
+	}
 	protocolBinding[key] = bindingValue
 }

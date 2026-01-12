@@ -1,0 +1,96 @@
+# Pre-commit hooks configuration
+# Install: pip install pre-commit
+# Setup: pre-commit install
+# Run manually: pre-commit run --all-files
+# Documentation: https://pre-commit.com/
+
+repos:
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: [--unsafe]  # Allow custom YAML tags
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+      - id: detect-private-key
+
+  # Go formatting
+  - repo: https://github.com/dnephin/pre-commit-golang
+    rev: v0.5.1
+    hooks:
+      - id: go-fmt
+        name: Run gofmt
+        description: Formats Go code
+      - id: go-imports
+        name: Run goimports
+        description: Updates Go import lines
+        args: [-local, github.com/fedanant/asyncapi-generator]
+      - id: go-vet
+        name: Run go vet
+        description: Reports suspicious constructs
+      - id: go-unit-tests
+        name: Run go test
+        description: Runs Go unit tests
+        args: [-timeout, 2m]
+
+  # golangci-lint
+  - repo: https://github.com/golangci/golangci-lint
+    rev: v1.55.2
+    hooks:
+      - id: golangci-lint
+        name: golangci-lint
+        description: Fast linters runner for Go
+        entry: golangci-lint run --fix
+        types: [go]
+        language: system
+        pass_filenames: false
+
+  # AsyncAPI validation
+  - repo: local
+    hooks:
+      - id: asyncapi-validate
+        name: Validate AsyncAPI Specification
+        description: Validates AsyncAPI spec files using AsyncAPI CLI
+        entry: bash -c 'for file in "$@"; do echo "Validating $file..."; asyncapi validate "$file" || exit 1; done' --
+        language: system
+        files: 'asyncapi\.(yaml|yml|json)$'
+        pass_filenames: true
+
+      - id: asyncapi-generate-test
+        name: Test AsyncAPI Generation
+        description: Ensures AsyncAPI spec can be generated from example code
+        entry: bash -c 'cd example/nats && go run ../../cmd/asyncapi-doc/main.go generate -output asyncapi.yaml . && asyncapi validate asyncapi.yaml'
+        language: system
+        files: '^(internal/asyncapi/.*\.go|example/nats/.*\.go)$'
+        pass_filenames: false
+
+  # Markdown linting
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.38.0
+    hooks:
+      - id: markdownlint
+        name: Lint Markdown files
+        args: ['--fix', '--disable', 'MD013', 'MD033', 'MD041']
+
+  # Commit message formatting
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v3.0.0
+    hooks:
+      - id: conventional-pre-commit
+        name: Check commit message format
+        stages: [commit-msg]
+        args: [--force-scope]
+
+# Global settings
+default_language_version:
+  python: python3
+
+fail_fast: false

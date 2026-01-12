@@ -61,7 +61,7 @@ type Operation struct {
 	MessageCorrelationID string   // @message.correlationid
 }
 
-// ExternalDocsInfo holds external documentation metadata
+// ExternalDocsInfo holds external documentation metadata.
 type ExternalDocsInfo struct {
 	Description string
 	URL         string
@@ -83,6 +83,7 @@ func NewOperation() *Operation {
 	}
 }
 
+//nolint:gocyclo // Complex parsing logic is intentionally centralized for maintainability
 func (operation *Operation) ParseComment(comment string, tc *TypeChecker) error {
 	commentLine := strings.TrimSpace(strings.TrimLeft(comment, "/"))
 	if commentLine == "" {
@@ -249,7 +250,7 @@ func GetByNameType(typeName string, tc *TypeChecker) interface{} {
 	return struct{}{}
 }
 
-// ParseSecurity parses comma-separated security scheme names
+// ParseSecurity parses comma-separated security scheme names.
 func (operation *Operation) ParseSecurity(value string) {
 	schemes := strings.Split(value, ",")
 	for _, scheme := range schemes {
@@ -260,7 +261,7 @@ func (operation *Operation) ParseSecurity(value string) {
 	}
 }
 
-// ParseOperationTag adds an operation tag
+// ParseOperationTag adds an operation tag.
 func (operation *Operation) ParseOperationTag(value string) {
 	trimmed := strings.TrimSpace(value)
 	if trimmed != "" {
@@ -268,13 +269,13 @@ func (operation *Operation) ParseOperationTag(value string) {
 	}
 }
 
-// ParseDeprecated marks the operation as deprecated
+// ParseDeprecated marks the operation as deprecated.
 func (operation *Operation) ParseDeprecated(value string) {
 	trimmed := strings.ToLower(strings.TrimSpace(value))
 	operation.Deprecated = trimmed == "true" || trimmed == ""
 }
 
-// ParseOperationExternalDocsDesc sets the external docs description
+// ParseOperationExternalDocsDesc sets the external docs description.
 func (operation *Operation) ParseOperationExternalDocsDesc(value string) {
 	if operation.ExternalDocs == nil {
 		operation.ExternalDocs = &ExternalDocsInfo{}
@@ -282,7 +283,7 @@ func (operation *Operation) ParseOperationExternalDocsDesc(value string) {
 	operation.ExternalDocs.Description = strings.TrimSpace(value)
 }
 
-// ParseOperationExternalDocsURL sets the external docs URL
+// ParseOperationExternalDocsURL sets the external docs URL.
 func (operation *Operation) ParseOperationExternalDocsURL(value string) {
 	if operation.ExternalDocs == nil {
 		operation.ExternalDocs = &ExternalDocsInfo{}
@@ -290,7 +291,7 @@ func (operation *Operation) ParseOperationExternalDocsURL(value string) {
 	operation.ExternalDocs.URL = strings.TrimSpace(value)
 }
 
-// ParseMessageTag adds a message tag
+// ParseMessageTag adds a message tag.
 func (operation *Operation) ParseMessageTag(value string) {
 	trimmed := strings.TrimSpace(value)
 	if trimmed != "" {
@@ -298,30 +299,39 @@ func (operation *Operation) ParseMessageTag(value string) {
 	}
 }
 
-// ParseBindingNATS parses NATS-specific binding properties
+// ParseBindingNATS parses NATS-specific binding properties.
 func (operation *Operation) ParseBindingNATS(key, value string) {
 	if operation.Bindings["nats"] == nil {
 		operation.Bindings["nats"] = make(map[string]interface{})
 	}
-	natsBinding := operation.Bindings["nats"].(map[string]interface{})
+	natsBinding, ok := operation.Bindings["nats"].(map[string]interface{})
+	if !ok {
+		return
+	}
 	natsBinding[key] = strings.TrimSpace(value)
 }
 
-// ParseBindingAMQP parses AMQP-specific binding properties
+// ParseBindingAMQP parses AMQP-specific binding properties.
 func (operation *Operation) ParseBindingAMQP(key, value string) {
 	if operation.Bindings["amqp"] == nil {
 		operation.Bindings["amqp"] = make(map[string]interface{})
 	}
-	amqpBinding := operation.Bindings["amqp"].(map[string]interface{})
+	amqpBinding, ok := operation.Bindings["amqp"].(map[string]interface{})
+	if !ok {
+		return
+	}
 	amqpBinding[key] = strings.TrimSpace(value)
 }
 
-// ParseBindingKafka parses Kafka-specific binding properties
+// ParseBindingKafka parses Kafka-specific binding properties.
 func (operation *Operation) ParseBindingKafka(key, value string) {
 	if operation.Bindings["kafka"] == nil {
 		operation.Bindings["kafka"] = make(map[string]interface{})
 	}
-	kafkaBinding := operation.Bindings["kafka"].(map[string]interface{})
+	kafkaBinding, ok := operation.Bindings["kafka"].(map[string]interface{})
+	if !ok {
+		return
+	}
 
 	// Handle numeric fields
 	trimmed := strings.TrimSpace(value)

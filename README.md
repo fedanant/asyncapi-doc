@@ -975,7 +975,137 @@ asyncapi-doc generate -output ./api.yaml -exclude vendor,testdata,.git ./src
 asyncapi-doc generate -output ./asyncapi.yaml -exclude vendor,node_modules -verbose ./
 ```
 
-### Examples
+### Development Setup
+
+### Prerequisites
+
+For contributors and developers working on AsyncAPI Generator:
+
+**Required:**
+- Go 1.23 or later
+- Make
+
+**Optional (for development workflow):**
+- [pre-commit](https://pre-commit.com/) - Git hook framework for automated checks
+- [AsyncAPI CLI](https://github.com/asyncapi/cli) - For validating generated specs
+
+### Installing Development Tools
+
+#### Pre-commit Hooks
+
+Pre-commit hooks automatically check code quality before commits:
+
+```bash
+# Install pre-commit (macOS)
+brew install pre-commit
+
+# Or using pip
+pip install pre-commit
+
+# Install the git hooks
+make pre-commit-install
+```
+
+The pre-commit configuration includes:
+- **Go formatting** - gofmt, goimports, go vet
+- **Linting** - golangci-lint with comprehensive rules
+- **AsyncAPI validation** - Validates generated specs
+- **File checks** - Trailing whitespace, merge conflicts, etc.
+- **Markdown linting** - Documentation quality checks
+- **Conventional commits** - Commit message formatting
+
+#### AsyncAPI CLI
+
+For validating generated AsyncAPI specifications:
+
+```bash
+# Install AsyncAPI CLI (Node.js)
+npm install -g @asyncapi/cli
+
+# Validate a spec
+asyncapi validate ./asyncapi.yaml
+```
+
+### Development Workflow
+
+#### Running Tests
+
+```bash
+# Run all tests
+make test
+
+# Run tests with coverage
+make test-coverage
+
+# View coverage report
+make coverage
+```
+
+#### Linting
+
+```bash
+# Run golangci-lint
+make lint
+
+# Run all pre-commit hooks manually
+make pre-commit-run
+```
+
+#### Validation
+
+```bash
+# Generate and validate AsyncAPI spec from example
+make validate-asyncapi
+
+# Run all checks (lint + test + validate + build)
+make check-all
+```
+
+#### Building
+
+```bash
+# Build the binary
+make build
+
+# Install to GOPATH/bin
+make install
+
+# Clean build artifacts
+make clean
+```
+
+### Available Make Targets
+
+Run `make help` to see all available targets:
+
+```bash
+make help
+```
+
+Key targets:
+- `make build` - Build the binary
+- `make test` - Run tests
+- `make lint` - Run linter
+- `make validate-asyncapi` - Validate AsyncAPI specs
+- `make check-all` - Run all checks
+- `make pre-commit-install` - Install pre-commit hooks
+- `make pre-commit-run` - Run pre-commit on all files
+- `make clean` - Clean build artifacts
+
+### Code Quality
+
+The project uses:
+- **golangci-lint** - Comprehensive Go linter with multiple analyzers
+- **Pre-commit hooks** - Automated checks before commits
+- **AsyncAPI validation** - Ensures generated specs are valid
+- **Unit tests** - Comprehensive test coverage
+
+Configuration files:
+- `.golangci.yml` - Linter configuration
+- `.pre-commit-config.yaml` - Pre-commit hooks
+- `Makefile` - Build and development tasks
+
+## Examples
 
 - [NATS Example](./example/nats) - Complete example with NATS message broker
 - [AsyncAPI Specification](https://www.asyncapi.com/docs/reference/specification/latest)

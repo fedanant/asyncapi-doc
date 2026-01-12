@@ -1,4 +1,4 @@
-.PHONY: build clean test fmt lint lint-install install run help coverage coverage-html coverage-func coverage-report
+.PHONY: build clean test fmt lint lint-install install run help coverage coverage-html coverage-func coverage-report pre-commit-install pre-commit-run validate-asyncapi
 
 BINARY_NAME=asyncapi-doc
 BUILD_DIR=bin
@@ -129,23 +129,85 @@ clean:
 check: lint test build
 	@echo "All checks passed!"
 
+# Install pre-commit hooks
+pre-commit-install:
+	@echo "Installing pre-commit hooks..."
+	@if command -v pre-commit > /dev/null; then \
+		pre-commit install; \
+		pre-commit install --hook-type commit-msg; \
+		echo "✓ Pre-commit hooks installed"; \
+	else \
+		echo "❌ pre-commit not installed."; \
+		echo ""; \
+		echo "Install it with: pip install pre-commit"; \
+		echo "Or visit: https://pre-commit.com/"; \
+		exit 1; \
+	fi
+
+# Run pre-commit hooks on all files
+pre-commit-run:
+	@echo "Running pre-commit hooks on all files..."
+	@if command -v pre-commit > /dev/null; then \
+		pre-commit run --all-files; \
+	else \
+		echo "❌ pre-commit not installed."; \
+		echo "Run: make pre-commit-install"; \
+		exit 1; \
+	fi
+
+# Validate AsyncAPI specifications
+validate-asyncapi:
+	@echo "Validating AsyncAPI specifications..."
+	@if command -v asyncapi > /dev/null; then \
+		echo "Generating AsyncAPI spec from example..."; \
+		cd example/nats && go run ../../cmd/asyncapi-doc/main.go generate -output asyncapi.yaml .; \
+		echo "Validating generated spec..."; \
+		asyncapi validate example/nats/asyncapi.yaml; \
+		echo "✓ AsyncAPI specification is valid"; \
+	else \
+		echo "❌ AsyncAPI CLI not installed."; \
+		echo ""; \
+		echo "Install it with: npm install -g @asyncapi/cli"; \
+		echo "Or visit: https://www.asyncapi.com/tools/cli"; \
+		exit 1; \
+	fi
+
+# Run all checks including pre-commit and AsyncAPI validation
+check-all: lint test validate-asyncapi build
+	@echo "All checks passed!"
+
 # Display help
 help:
 	@echo "Available targets:"
-	@echo "  build           - Build the application"
-	@echo "  build-all       - Build for multiple platforms"
-	@echo "  install         - Install binary to GOPATH/bin"
-	@echo "  run             - Run the application (use ARGS='...' for arguments)"
-	@echo "  test            - Run tests"
-	@echo "  test-race       - Run tests with race detector"
-	@echo "  coverage        - Run tests with coverage"
-	@echo "  coverage-html   - Generate HTML coverage report and open in browser"
-	@echo "  coverage-func   - Show coverage by function"
-	@echo "  coverage-report - Show comprehensive coverage report"
-	@echo "  fmt             - Format code"
-	@echo "  lint            - Run linter"
-	@echo "  lint-install    - Install golangci-lint"
-	@echo "  tidy            - Tidy dependencies"
-	@echo "  clean           - Clean build artifacts"
-	@echo "  check           - Run all checks (lint + test + build)"
-	@echo "  help            - Display this help message"
+	@echo ""
+	@echo "Build:"
+	@echo "  build              - Build the application"
+	@echo "  build-all          - Build for multiple platforms"
+	@echo "  install            - Install binary to GOPATH/bin"
+	@echo "  run                - Run the application (use ARGS='...' for arguments)"
+	@echo ""
+	@echo "Testing:"
+	@echo "  test               - Run tests"
+	@echo "  test-race          - Run tests with race detector"
+	@echo "  coverage           - Run tests with coverage"
+	@echo "  coverage-html      - Generate HTML coverage report and open in browser"
+	@echo "  coverage-func      - Show coverage by function"
+	@echo "  coverage-report    - Show comprehensive coverage report"
+	@echo ""
+	@echo "Code Quality:"
+	@echo "  fmt                - Format code"
+	@echo "  lint               - Run golangci-lint"
+	@echo "  lint-install       - Install golangci-lint"
+	@echo "  pre-commit-install - Install pre-commit hooks"
+	@echo "  pre-commit-run     - Run pre-commit hooks on all files"
+	@echo "  validate-asyncapi  - Validate AsyncAPI specifications"
+	@echo ""
+	@echo "Maintenance:"
+	@echo "  tidy               - Tidy dependencies"
+	@echo "  clean              - Clean build artifacts"
+	@echo ""
+	@echo "Combined Checks:"
+	@echo "  check              - Run lint + test + build"
+	@echo "  check-all          - Run lint + test + validate-asyncapi + build"
+	@echo ""
+	@echo "  help               - Display this help message"
