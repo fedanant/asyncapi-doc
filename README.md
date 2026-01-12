@@ -805,8 +805,21 @@ asyncapi-doc generate [options] <source-directory>
 | Flag | Description | Default |
 |------|-------------|---------|
 | `-output` | Output file path for generated spec | `./asyncapi.yaml` |
-| `-template` | Template to use (yaml, json, html) | `yaml` |
+| `-exclude` | Comma-separated list of directories to exclude | `""` |
 | `-verbose` | Enable verbose output | `false` |
+
+#### Examples
+
+```bash
+# Basic usage
+asyncapi-doc generate -output ./asyncapi.yaml ./example/nats
+
+# Exclude vendor and test directories
+asyncapi-doc generate -output ./api.yaml -exclude vendor,testdata,.git ./src
+
+# Verbose mode with exclusions
+asyncapi-doc generate -output ./asyncapi.yaml -exclude vendor,node_modules -verbose ./
+```
 
 ### Examples
 

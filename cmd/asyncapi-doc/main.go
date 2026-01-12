@@ -53,6 +53,7 @@ func generate() {
 	fs := flag.NewFlagSet("generate", flag.ExitOnError)
 	output := fs.String("output", "./asyncapi.yaml", "output file for generated AsyncAPI specification")
 	verbose := fs.Bool("verbose", false, "enable verbose output")
+	exclude := fs.String("exclude", "", "comma-separated list of directories to exclude (e.g., vendor,node_modules,.git)")
 
 	if err := fs.Parse(os.Args[2:]); err != nil {
 		log.Fatalf("Failed to parse flags: %v\n", err)
@@ -71,9 +72,12 @@ func generate() {
 	if *verbose {
 		fmt.Printf("Parsing source directory: %s\n", codeFolder)
 		fmt.Printf("Output file: %s\n", *output)
+		if *exclude != "" {
+			fmt.Printf("Excluding directories: %s\n", *exclude)
+		}
 	}
 
-	yaml, err := asyncapi.ParseFolder(codeFolder, *verbose)
+	yaml, err := asyncapi.ParseFolder(codeFolder, *verbose, *exclude)
 	if err != nil {
 		log.Fatalf("Failed to parse folder: %v\n", err)
 	}

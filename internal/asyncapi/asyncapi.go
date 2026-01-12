@@ -72,7 +72,7 @@ func isGeneralAPIComment(comments []string) bool {
 }
 
 //nolint:gocyclo // Complex folder parsing logic is intentionally centralized
-func ParseFolder(srcDir string, verbose bool) ([]byte, error) {
+func ParseFolder(srcDir string, verbose bool, excludeDirs string) ([]byte, error) {
 	// Validate that the source directory exists
 	if _, err := os.Stat(srcDir); os.IsNotExist(err) {
 		return nil, fmt.Errorf("source directory does not exist: %s", srcDir)
@@ -84,8 +84,27 @@ func ParseFolder(srcDir string, verbose bool) ([]byte, error) {
 	}
 	fset := token.NewFileSet()
 
+	// Parse excluded directories list
+	excludeMap := make(map[string]bool)
+	if excludeDirs != "" {
+		for _, dir := range strings.Split(excludeDirs, ",") {
+			excludeMap[strings.TrimSpace(dir)] = true
+		}
+	}
+
+	// Create filter function to exclude directories
+	filter := func(info os.FileInfo) bool {
+		if info.IsDir() && excludeMap[info.Name()] {
+			if verbose {
+				fmt.Printf("Excluding directory: %s\n", info.Name())
+			}
+			return false
+		}
+		return true
+	}
+
 	// Parse all files in the directory
-	pkgs, err := parser.ParseDir(fset, srcDir, nil, parser.ParseComments)
+	pkgs, err := parser.ParseDir(fset, srcDir, filter, parser.ParseComments)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse directory %s: %w", srcDir, err)
 	}
@@ -197,7 +216,7 @@ func ParseFolder(srcDir string, verbose bool) ([]byte, error) {
 
 func Gen(filename, outFile string) error {
 	srcDir := filepath.Dir(filename)
-	yaml, err := ParseFolder(srcDir, false)
+	yaml, err := ParseFolder(srcDir, false, "")
 	if err != nil {
 		return fmt.Errorf("failed to parse folder: %w", err)
 	}
