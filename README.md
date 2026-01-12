@@ -299,7 +299,7 @@ func (s *Service) SubscribeToUserUpdates(ctx context.Context) {
 | `@summary` | Short operation summary | No | `@summary Order placed event` |
 | `@description` | Detailed description | No | `@description Publishes when order is placed` |
 | `@payload` | Go type name for message payload | Yes | `@payload OrderPlacedEvent` |
-| `@response` | Go type name for response (request-reply pattern) | No | `@response OrderResponse` |
+| `@response` | Go type name for response (automatically enables request-reply pattern) | No | `@response OrderResponse` |
 
 </details>
 
@@ -616,18 +616,19 @@ func (s *Service) SubscribeToRegionOrderStatus(ctx context.Context) error {
 
 #### Request-Reply Pattern (NATS)
 
-For NATS request-reply operations, use `@response` to indicate a reply is expected:
+For NATS request-reply operations, simply add `@response` to automatically enable the request-reply pattern. No need to specify `@type request` - it's detected automatically:
 
 ```go
 // @type sub
 // @name user.{userId}.get
 // @summary Get user by ID
-// @description Request-reply pattern: client sends request, service replies with user data
+// @description Handles user lookup requests and sends replies with user data
 // @payload GetUserRequest
 // @response GetUserResponse
 func (s *Service) HandleGetUser(ctx context.Context) error {
     // Subscribes to: user.{userId}.get
-    // Expects to send reply with GetUserResponse
+    // Automatically configured as request-reply because @response is present
+    // Operation name will be: requestUserGet
 }
 ```
 

@@ -91,7 +91,7 @@ The example uses these annotation tags:
 - `@summary` - Short summary of the operation
 - `@description` - Detailed description
 - `@payload` - Go type name for the message payload
-- `@response` - Go type name for the response (for request-reply patterns)
+- `@response` - Go type name for the response (automatically enables request-reply pattern)
 
 ## Message Types
 

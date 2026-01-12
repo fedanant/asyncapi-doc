@@ -224,7 +224,9 @@ func (p *Parser) proccessOperation(operation *Operation) {
 	channelName := toChannelName(operation.Name)
 	messageName := channelName + "Message"
 
-	action, operationName := p.determineActionAndName(operation.TypeOperation, channelName)
+	// Check if this is a request-reply pattern (has @response)
+	hasResponse := operation.MessageResponse != nil && operation.MessageResponse.MessageSample != nil
+	action, operationName := p.determineActionAndName(operation.TypeOperation, channelName, hasResponse)
 	channelParams := p.createChannelParameters(operation.Parameters)
 
 	// Create and register the message
@@ -236,8 +238,8 @@ func (p *Parser) proccessOperation(operation *Operation) {
 	// Create the operation
 	op := p.createOperation(action, channelName, messageName, operation.Message)
 
-	// Handle request-reply pattern
-	if operation.TypeOperation == "request" && operation.MessageResponse != nil && operation.MessageResponse.MessageSample != nil {
+	// Handle request-reply pattern - automatically detected when @response is present
+	if operation.MessageResponse != nil && operation.MessageResponse.MessageSample != nil {
 		p.addReplyConfiguration(&op, channelName, operation, channelParams)
 	}
 
@@ -245,9 +247,10 @@ func (p *Parser) proccessOperation(operation *Operation) {
 }
 
 // determineActionAndName returns the action and operation name based on operation type.
+// If hasResponse is true, it automatically treats the operation as a request-reply pattern.
 //
 //nolint:gocritic // Named returns would reduce readability here
-func (p *Parser) determineActionAndName(opType, channelName string) (spec3.OperationAction, string) {
+func (p *Parser) determineActionAndName(opType, channelName string, hasResponse bool) (spec3.OperationAction, string) {
 	// Capitalize first letter of channelName
 	capitalizedName := channelName
 	if len(channelName) > 0 {
@@ -257,13 +260,16 @@ func (p *Parser) determineActionAndName(opType, channelName string) (spec3.Opera
 		_ = caser // Keep import to satisfy linter
 	}
 
+	// If @response is present, this is a request-reply pattern
+	if hasResponse {
+		return spec3.ActionSend, "request" + capitalizedName
+	}
+
 	switch opType {
 	case "pub":
 		return spec3.ActionSend, "publish" + capitalizedName
 	case "sub":
 		return spec3.ActionReceive, "subscribe" + capitalizedName
-	case "request":
-		return spec3.ActionSend, "request" + capitalizedName
 	default:
 		return spec3.ActionReceive, "subscribe" + capitalizedName
 	}

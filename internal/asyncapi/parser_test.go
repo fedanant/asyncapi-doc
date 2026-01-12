@@ -314,20 +314,23 @@ func TestDetermineActionAndName(t *testing.T) {
 	parser := NewParser()
 
 	tests := []struct {
+		name        string
 		opType      string
 		channelName string
+		hasResponse bool
 		wantAction  spec3.OperationAction
 		wantName    string
 	}{
-		{"pub", "userCreated", spec3.ActionSend, "publishUserCreated"},
-		{"sub", "userUpdated", spec3.ActionReceive, "subscribeUserUpdated"},
-		{"request", "getUser", spec3.ActionSend, "requestGetUser"},
-		{"unknown", "someChannel", spec3.ActionReceive, "subscribeSomeChannel"},
+		{"publish operation", "pub", "userCreated", false, spec3.ActionSend, "publishUserCreated"},
+		{"subscribe operation", "sub", "userUpdated", false, spec3.ActionReceive, "subscribeUserUpdated"},
+		{"request-reply with response", "sub", "getUser", true, spec3.ActionSend, "requestGetUser"},
+		{"request-reply overrides pub", "pub", "getUser", true, spec3.ActionSend, "requestGetUser"},
+		{"unknown defaults to subscribe", "unknown", "someChannel", false, spec3.ActionReceive, "subscribeSomeChannel"},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.opType, func(t *testing.T) {
-			action, name := parser.determineActionAndName(tt.opType, tt.channelName)
+		t.Run(tt.name, func(t *testing.T) {
+			action, name := parser.determineActionAndName(tt.opType, tt.channelName, tt.hasResponse)
 
 			if action != tt.wantAction {
 				t.Errorf("action = %v, want %v", action, tt.wantAction)

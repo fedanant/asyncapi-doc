@@ -189,7 +189,7 @@ func (s *Service) SubscribeToOrderEvents(ctx context.Context) {
 }
 
 // RequestGetUser sends a request to get user details and waits for a response
-// @type request
+// @type pub
 // @name user.get
 // @summary Get User Request
 // @description Sends a request to retrieve user details by ID and waits for response
