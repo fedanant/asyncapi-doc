@@ -100,11 +100,11 @@ jobs:
           fi
 
       - name: Smoke test binary
+        # Only run smoke tests for native platform (linux/amd64)
+        # Cross-compiled binaries cannot be executed on the build runner
+        if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
         run: |
           BINARY_NAME="asyncapi-doc"
-          if [ "${{ matrix.goos }}" = "windows" ]; then
-            BINARY_NAME="${BINARY_NAME}.exe"
-          fi
 
           echo "Running smoke tests on ${BINARY_NAME}..."
 
@@ -114,7 +114,7 @@ jobs:
             exit 1
           fi
 
-          chmod +x "${BINARY_NAME}" 2>/dev/null || true
+          chmod +x "${BINARY_NAME}"
 
           # Test 2: Run version command
           echo "Testing version command..."
@@ -130,18 +130,39 @@ jobs:
             exit 1
           }
 
-          # Test 4: Verify binary is statically linked (Linux only)
-          if [ "${{ matrix.goos }}" = "linux" ]; then
-            if command -v ldd > /dev/null; then
-              if ldd "${BINARY_NAME}" 2>&1 | grep -q "not a dynamic executable"; then
-                echo "✓ Binary is statically linked"
-              else
-                echo "⚠ Binary appears to be dynamically linked"
-              fi
+          # Test 4: Verify binary is statically linked
+          if command -v ldd > /dev/null; then
+            if ldd "${BINARY_NAME}" 2>&1 | grep -q "not a dynamic executable"; then
+              echo "✓ Binary is statically linked"
+            else
+              echo "⚠ Binary appears to be dynamically linked"
             fi
           fi
 
           echo "✓ All smoke tests passed for ${{ matrix.goos }}-${{ matrix.goarch }}"
+
+      - name: Validate binary exists
+        # For cross-compiled binaries, just verify they were created
+        if: matrix.goos != 'linux' || matrix.goarch != 'amd64'
+        run: |
+          BINARY_NAME="asyncapi-doc"
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            BINARY_NAME="${BINARY_NAME}.exe"
+          fi
+
+          if [ ! -f "${BINARY_NAME}" ]; then
+            echo "❌ Binary not found: ${BINARY_NAME}"
+            exit 1
+          fi
+
+          # Verify it's a valid binary file (has content)
+          SIZE=$(stat -c%s "${BINARY_NAME}" 2>/dev/null || stat -f%z "${BINARY_NAME}" 2>/dev/null || echo "0")
+          if [ "$SIZE" -lt 1000000 ]; then
+            echo "❌ Binary seems too small (${SIZE} bytes) - build may have failed"
+            exit 1
+          fi
+
+          echo "✓ Binary validated for ${{ matrix.goos }}-${{ matrix.goarch }} (${SIZE} bytes)"
 
       - name: Generate checksums
         run: |
