@@ -12,7 +12,7 @@ AsyncAPI Generator is a code-to-spec tool that automatically generates AsyncAPI 
 
 ![AsyncAPI Generator Demo](doc/video.gif)
 
-## Table of Contents
+## Contents
 
 - [Installation](#installation)
 - [Quick Start](#quick-start)

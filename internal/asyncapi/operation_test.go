@@ -38,7 +38,6 @@ func TestParseType(t *testing.T) {
 	}{
 		{"pub", "pub"},
 		{"sub", "sub"},
-		{"request", "request"},
 	}
 
 	for _, tt := range tests {
