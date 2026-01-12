@@ -10,34 +10,72 @@ import (
 )
 
 const (
-	titleAttr              = "@title"
-	urlAttr                = "@url"
-	hostAttr               = "@host"
-	versionAttr            = "@version"
-	typeAttr               = "@type"
-	nameAttr               = "@name"
-	protocolAttr           = "@protocol"
-	protocolVersionAttr    = "@protocolversion"
-	pathnameAttr           = "@pathname"
-	descriptionAttr        = "@description"
-	summaryAttr            = "@summary"
-	payloadAttr            = "@payload"
-	responseAttr           = "@response"
-	termsOfServiceAttr     = "@termsofservice"
-	contactNameAttr        = "@contact.name"
-	contactURLAttr         = "@contact.url"
-	contactEmailAttr       = "@contact.email"
-	licenseNameAttr        = "@license.name"
-	licenseURLAttr         = "@license.url"
-	tagAttr                = "@tag"
-	externalDocsDescAttr   = "@externaldocs.description"
-	externalDocsURLAttr    = "@externaldocs.url"
-	serverTitleAttr        = "@server.title"
-	serverSummaryAttr      = "@server.summary"
-	serverDescriptionAttr  = "@server.description"
-	serverTagAttr          = "@server.tag"
-	serverExternalDocsDesc = "@server.externaldocs.description"
-	serverExternalDocsURL  = "@server.externaldocs.url"
+	// Service-level annotations (camelCase)
+	titleAttr            = "@title"
+	urlAttr              = "@url"
+	hostAttr             = "@host"
+	versionAttr          = "@version"
+	termsOfServiceAttr   = "@termsofservice"
+	contactNameAttr      = "@contact.name"
+	contactURLAttr       = "@contact.url"
+	contactEmailAttr     = "@contact.email"
+	licenseNameAttr      = "@license.name"
+	licenseURLAttr       = "@license.url"
+	tagAttr              = "@tag"
+	externalDocsDescAttr = "@externaldocs.description"
+	externalDocsURLAttr  = "@externaldocs.url"
+
+	// Server annotations (camelCase in user code, lowercase for internal matching)
+	protocolAttr               = "@protocol"
+	protocolVersionAttr        = "@protocolversion"
+	pathnameAttr               = "@pathname"
+	serverNameAttr             = "@server.name"
+	serverTitleAttr            = "@server.title"
+	serverSummaryAttr          = "@server.summary"
+	serverDescriptionAttr      = "@server.description"
+	serverTagAttr              = "@server.tag"
+	serverExternalDocsDescAttr = "@server.externaldocs.description"
+	serverExternalDocsURLAttr  = "@server.externaldocs.url"
+	serverVariableAttr         = "@server.variable"
+	serverSecurityAttr         = "@server.security"
+	serverBindingAttr          = "@server.binding"
+
+	// Operation annotations (camelCase in user code, lowercase for internal matching)
+	typeAttr                      = "@type"
+	nameAttr                      = "@name"
+	descriptionAttr               = "@description"
+	summaryAttr                   = "@summary"
+	payloadAttr                   = "@payload"
+	responseAttr                  = "@response"
+	securityAttr                  = "@security"
+	operationTagAttr              = "@operation.tag"
+	operationExternalDocsDescAttr = "@operation.externaldocs.description"
+	operationExternalDocsURLAttr  = "@operation.externaldocs.url"
+	deprecatedAttr                = "@deprecated"
+	traitAttr                     = "@trait"
+
+	// Message annotations (camelCase in user code, lowercase for internal matching)
+	messageContentTypeAttr   = "@message.contenttype"
+	messageTitleAttr         = "@message.title"
+	messageNameAttr          = "@message.name"
+	messageTagAttr           = "@message.tag"
+	messageHeadersAttr       = "@message.headers"
+	messageCorrelationIDAttr = "@message.correlationid"
+	messageExamplesAttr      = "@message.examples"
+
+	// Channel annotations (camelCase)
+	channelTitleAttr       = "@channel.title"
+	channelDescriptionAttr = "@channel.description"
+	channelAddressAttr     = "@channel.address"
+
+	// Binding annotations (protocol-specific, camelCase in user code, lowercase for internal matching)
+	bindingNATSQueueAttr         = "@binding.nats.queue"
+	bindingNATSDeliverPolicyAttr = "@binding.nats.deliverpolicy"
+	bindingAMQPExchangeAttr      = "@binding.amqp.exchange"
+	bindingAMQPRoutingKeyAttr    = "@binding.amqp.routingkey"
+	bindingKafkaTopicAttr        = "@binding.kafka.topic"
+	bindingKafkaPartitionsAttr   = "@binding.kafka.partitions"
+	bindingKafkaReplicasAttr     = "@binding.kafka.replicas"
 )
 
 // Parser parses Go source comments and generates AsyncAPI 3.0 specifications.
@@ -61,6 +99,7 @@ func (p *Parser) ParseMain(comments []string) {
 	var protocolVersion string
 	var pathname string
 	var serverName string
+	var serverHost string
 	var tags []spec3.Tag
 	var externalDocs *spec3.ExternalDocs
 	var serverTags []spec3.Tag
@@ -68,6 +107,9 @@ func (p *Parser) ParseMain(comments []string) {
 	var serverTitle string
 	var serverSummary string
 	var serverDescription string
+	var serverVariables map[string]spec3.ServerVar
+	var serverSecurity []map[string][]string
+	var serverBindings map[string]interface{}
 
 	for i := range comments {
 		commentLine := comments[i]
@@ -142,6 +184,8 @@ func (p *Parser) ParseMain(comments []string) {
 			serverSummary = value
 		case serverDescriptionAttr:
 			serverDescription = value
+		case serverNameAttr:
+			serverName = value
 		case serverTagAttr:
 			// Parse tag in format: "name - description" or just "name"
 			tagParts := strings.SplitN(value, " - ", 2)
@@ -150,47 +194,82 @@ func (p *Parser) ParseMain(comments []string) {
 				tag.Description = strings.TrimSpace(tagParts[1])
 			}
 			serverTags = append(serverTags, tag)
-		case serverExternalDocsDesc:
+		case serverExternalDocsDescAttr:
 			if serverExternalDocs == nil {
 				serverExternalDocs = &spec3.ExternalDocs{}
 			}
 			serverExternalDocs.Description = value
-		case serverExternalDocsURL:
+		case serverExternalDocsURLAttr:
 			if serverExternalDocs == nil {
 				serverExternalDocs = &spec3.ExternalDocs{}
 			}
 			serverExternalDocs.URL = value
+		case serverVariableAttr:
+			// Parse variable in format: "name enum=val1,val2 default=val1 description=Variable description"
+			if serverVariables == nil {
+				serverVariables = make(map[string]spec3.ServerVar)
+			}
+			parseServerVariable(value, serverVariables)
+		case serverSecurityAttr:
+			// Parse security scheme names (comma-separated)
+			schemes := strings.Split(value, ",")
+			for _, scheme := range schemes {
+				trimmed := strings.TrimSpace(scheme)
+				if trimmed != "" {
+					serverSecurity = append(serverSecurity, map[string][]string{
+						trimmed: {},
+					})
+				}
+			}
+		case serverBindingAttr:
+			// Parse binding in format: "protocol.key value"
+			if serverBindings == nil {
+				serverBindings = make(map[string]interface{})
+			}
+			parseServerBinding(value, serverBindings)
 		case urlAttr, hostAttr:
-			// AsyncAPI 3.0 uses 'host' instead of 'url'
-			// Support both @url and @host for backward compatibility
-			if serverName == "" {
-				serverName = "default"
-			}
+			// Store the host value, server will be created after all comments are parsed
 			// Strip protocol prefix from host if present (e.g., nats://localhost:4222 -> localhost:4222)
-			host := value
-			if idx := strings.Index(host, "://"); idx != -1 {
-				host = host[idx+3:]
+			serverHost = value
+			if idx := strings.Index(serverHost, "://"); idx != -1 {
+				serverHost = serverHost[idx+3:]
 			}
-
-			server := spec3.Server{
-				Host:            host,
-				Protocol:        protocol,
-				ProtocolVersion: protocolVersion,
-				Pathname:        pathname,
-				Title:           serverTitle,
-				Summary:         serverSummary,
-				Description:     serverDescription,
-			}
-
-			if len(serverTags) > 0 {
-				server.Tags = serverTags
-			}
-			if serverExternalDocs != nil && serverExternalDocs.URL != "" {
-				server.ExternalDocs = serverExternalDocs
-			}
-
-			p.asyncAPI.Servers[serverName] = server
 		}
+	}
+
+	// Create server after all attributes have been parsed
+	if serverHost != "" {
+		if serverName == "" {
+			serverName = "default"
+		}
+
+		server := spec3.Server{
+			Host:            serverHost,
+			Protocol:        protocol,
+			ProtocolVersion: protocolVersion,
+			Pathname:        pathname,
+			Title:           serverTitle,
+			Summary:         serverSummary,
+			Description:     serverDescription,
+		}
+
+		if len(serverTags) > 0 {
+			server.Tags = serverTags
+		}
+		if serverExternalDocs != nil && serverExternalDocs.URL != "" {
+			server.ExternalDocs = serverExternalDocs
+		}
+		if len(serverVariables) > 0 {
+			server.Variables = serverVariables
+		}
+		if len(serverSecurity) > 0 {
+			server.Security = serverSecurity
+		}
+		if len(serverBindings) > 0 {
+			server.Bindings = serverBindings
+		}
+
+		p.asyncAPI.Servers[serverName] = server
 	}
 
 	// In AsyncAPI 3.0.0, tags and externalDocs are part of the Info object, not root level
@@ -230,13 +309,13 @@ func (p *Parser) proccessOperation(operation *Operation) {
 	channelParams := p.createChannelParameters(operation.Parameters)
 
 	// Create and register the message
-	p.createMessage(messageName, operation.Message)
+	p.createMessage(messageName, operation.Message, operation)
 
 	// Create and register the channel
-	p.createChannel(channelName, operation.Name, messageName, channelParams)
+	p.createChannel(channelName, operation.Name, messageName, channelParams, operation)
 
 	// Create the operation
-	op := p.createOperation(action, channelName, messageName, operation.Message)
+	op := p.createOperation(action, channelName, messageName, operation)
 
 	// Handle request-reply pattern - automatically detected when @response is present
 	if operation.MessageResponse != nil && operation.MessageResponse.MessageSample != nil {
@@ -287,11 +366,42 @@ func (p *Parser) createChannelParameters(params map[string]ParameterInfo) map[st
 }
 
 // createMessage creates and registers a message in the components section.
-func (p *Parser) createMessage(messageName string, msgInfo *MessageInfo) {
+func (p *Parser) createMessage(messageName string, msgInfo *MessageInfo, operation *Operation) {
 	message := spec3.Message{
 		Name:        messageName,
 		Summary:     msgInfo.Summary,
 		Description: msgInfo.Description,
+	}
+
+	// Add message metadata from operation annotations
+	if operation.MessageTitle != "" {
+		message.Title = operation.MessageTitle
+	}
+
+	if operation.MessageContentType != "" {
+		message.ContentType = operation.MessageContentType
+	}
+
+	if len(operation.MessageTags) > 0 {
+		message.Tags = make([]spec3.Tag, len(operation.MessageTags))
+		for i, tagName := range operation.MessageTags {
+			message.Tags[i] = spec3.Tag{Name: tagName}
+		}
+	}
+
+	// Handle message headers if specified
+	if operation.MessageHeaders != "" {
+		// Create a reference to the headers type in components/schemas
+		message.Headers = map[string]interface{}{
+			"$ref": "#/components/schemas/" + operation.MessageHeaders,
+		}
+	}
+
+	// Handle correlation ID if specified
+	if operation.MessageCorrelationID != "" {
+		message.CorrelationID = &spec3.CorrelationID{
+			Location: "$message.header#/" + operation.MessageCorrelationID,
+		}
 	}
 
 	if msgInfo.MessageSample != nil {
@@ -307,7 +417,7 @@ func (p *Parser) createMessage(messageName string, msgInfo *MessageInfo) {
 }
 
 // createChannel creates and registers a channel.
-func (p *Parser) createChannel(channelName, address, messageName string, params map[string]spec3.Parameter) {
+func (p *Parser) createChannel(channelName, address, messageName string, params map[string]spec3.Parameter, operation *Operation) {
 	channel := spec3.Channel{
 		Address: address,
 		Messages: map[string]spec3.MessageRef{
@@ -315,6 +425,15 @@ func (p *Parser) createChannel(channelName, address, messageName string, params 
 				Ref: "#/components/messages/" + messageName,
 			},
 		},
+	}
+
+	// Add channel metadata from operation annotations
+	if operation.ChannelTitle != "" {
+		channel.Title = operation.ChannelTitle
+	}
+
+	if operation.ChannelDescription != "" {
+		channel.Description = operation.ChannelDescription
 	}
 
 	if len(params) > 0 {
@@ -325,18 +444,54 @@ func (p *Parser) createChannel(channelName, address, messageName string, params 
 }
 
 // createOperation creates an operation structure.
-func (p *Parser) createOperation(action spec3.OperationAction, channelName, messageName string, msgInfo *MessageInfo) spec3.Operation {
-	return spec3.Operation{
+func (p *Parser) createOperation(action spec3.OperationAction, channelName, messageName string, operation *Operation) spec3.Operation {
+	op := spec3.Operation{
 		Action: action,
 		Channel: spec3.Reference{
 			Ref: "#/channels/" + channelName,
 		},
-		Summary:     msgInfo.Summary,
-		Description: msgInfo.Description,
+		Summary:     operation.Message.Summary,
+		Description: operation.Message.Description,
 		Messages: []spec3.Reference{
 			{Ref: "#/channels/" + channelName + "/messages/" + messageName},
 		},
 	}
+
+	// Add extended operation fields
+	// Note: operationId is NOT included - in AsyncAPI 3.0, the operation key serves as the ID
+
+	if operation.Deprecated {
+		op.Deprecated = true
+	}
+
+	if len(operation.OperationTags) > 0 {
+		op.Tags = make([]spec3.Tag, len(operation.OperationTags))
+		for i, tagName := range operation.OperationTags {
+			op.Tags[i] = spec3.Tag{Name: tagName}
+		}
+	}
+
+	if len(operation.Security) > 0 {
+		op.Security = make([]map[string][]string, len(operation.Security))
+		for i, schemeName := range operation.Security {
+			op.Security[i] = map[string][]string{
+				schemeName: {},
+			}
+		}
+	}
+
+	if operation.ExternalDocs != nil && operation.ExternalDocs.URL != "" {
+		op.ExternalDocs = &spec3.ExternalDocs{
+			Description: operation.ExternalDocs.Description,
+			URL:         operation.ExternalDocs.URL,
+		}
+	}
+
+	if len(operation.Bindings) > 0 {
+		op.Bindings = operation.Bindings
+	}
+
+	return op
 }
 
 // addReplyConfiguration adds reply channel and message for request-reply pattern.
@@ -345,10 +500,10 @@ func (p *Parser) addReplyConfiguration(op *spec3.Operation, channelName string, 
 	replyMessageName := replyChannelName + "Message"
 
 	// Create and register reply message
-	p.createMessage(replyMessageName, operation.MessageResponse)
+	p.createMessage(replyMessageName, operation.MessageResponse, operation)
 
 	// Create and register reply channel
-	p.createChannel(replyChannelName, operation.Name+"/reply", replyMessageName, channelParams)
+	p.createChannel(replyChannelName, operation.Name+"/reply", replyMessageName, channelParams, operation)
 
 	// Set reply configuration on operation
 	op.Reply = &spec3.OperationReply{
@@ -420,4 +575,69 @@ func (p *Parser) Validate() error {
 // MarshalYAML serializes the AsyncAPI 3.0 document to YAML format.
 func (p *Parser) MarshalYAML() ([]byte, error) {
 	return p.asyncAPI.MarshalYAML()
+}
+
+// parseServerVariable parses server variable annotation in format:
+// "varName enum=val1,val2 default=val1 description=Variable description"
+func parseServerVariable(value string, variables map[string]spec3.ServerVar) {
+	parts := strings.Fields(value)
+	if len(parts) == 0 {
+		return
+	}
+
+	varName := parts[0]
+	variable := spec3.ServerVar{}
+
+	// Parse remaining key=value pairs
+	for _, part := range parts[1:] {
+		if strings.Contains(part, "=") {
+			kv := strings.SplitN(part, "=", 2)
+			key := strings.TrimSpace(kv[0])
+			val := strings.TrimSpace(kv[1])
+
+			switch strings.ToLower(key) {
+			case "enum":
+				variable.Enum = strings.Split(val, ",")
+			case "default":
+				variable.Default = val
+			case "description":
+				// Handle description which may contain spaces
+				descIdx := strings.Index(value, "description=")
+				if descIdx != -1 {
+					variable.Description = strings.TrimSpace(value[descIdx+12:])
+					goto done
+				}
+			}
+		}
+	}
+
+done:
+	variables[varName] = variable
+}
+
+// parseServerBinding parses server binding annotation in format:
+// "protocol.key value" e.g., "nats.queue myQueue"
+func parseServerBinding(value string, bindings map[string]interface{}) {
+	parts := strings.Fields(value)
+	if len(parts) < 2 {
+		return
+	}
+
+	// Split protocol.key
+	bindingParts := strings.SplitN(parts[0], ".", 2)
+	if len(bindingParts) != 2 {
+		return
+	}
+
+	protocol := bindingParts[0]
+	key := bindingParts[1]
+	bindingValue := strings.Join(parts[1:], " ")
+
+	// Create protocol binding map if it doesn't exist
+	if bindings[protocol] == nil {
+		bindings[protocol] = make(map[string]interface{})
+	}
+
+	protocolBinding := bindings[protocol].(map[string]interface{})
+	protocolBinding[key] = bindingValue
 }

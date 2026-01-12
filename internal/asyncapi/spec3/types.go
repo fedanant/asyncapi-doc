@@ -120,18 +120,21 @@ type Parameter struct {
 
 // Operation represents an operation in AsyncAPI 3.0.
 // In 3.0, operations are separate from channels and define the action (send/receive).
+// Note: operationId is NOT a field in AsyncAPI 3.0 - the operation key in the operations object serves as the ID.
 type Operation struct {
-	Action      OperationAction        `json:"action" yaml:"action"`
-	Channel     Reference              `json:"channel" yaml:"channel"`
-	Title       string                 `json:"title,omitempty" yaml:"title,omitempty"`
-	Summary     string                 `json:"summary,omitempty" yaml:"summary,omitempty"`
-	Description string                 `json:"description,omitempty" yaml:"description,omitempty"`
-	Messages    []Reference            `json:"messages,omitempty" yaml:"messages,omitempty"`
-	Reply       *OperationReply        `json:"reply,omitempty" yaml:"reply,omitempty"`
-	Traits      []Reference            `json:"traits,omitempty" yaml:"traits,omitempty"`
-	Tags        []Tag                  `json:"tags,omitempty" yaml:"tags,omitempty"`
-	Bindings    map[string]interface{} `json:"bindings,omitempty" yaml:"bindings,omitempty"`
-	Security    []map[string][]string  `json:"security,omitempty" yaml:"security,omitempty"`
+	Action       OperationAction        `json:"action" yaml:"action"`
+	Channel      Reference              `json:"channel" yaml:"channel"`
+	Title        string                 `json:"title,omitempty" yaml:"title,omitempty"`
+	Summary      string                 `json:"summary,omitempty" yaml:"summary,omitempty"`
+	Description  string                 `json:"description,omitempty" yaml:"description,omitempty"`
+	Messages     []Reference            `json:"messages,omitempty" yaml:"messages,omitempty"`
+	Reply        *OperationReply        `json:"reply,omitempty" yaml:"reply,omitempty"`
+	Traits       []Reference            `json:"traits,omitempty" yaml:"traits,omitempty"`
+	Tags         []Tag                  `json:"tags,omitempty" yaml:"tags,omitempty"`
+	Bindings     map[string]interface{} `json:"bindings,omitempty" yaml:"bindings,omitempty"`
+	Security     []map[string][]string  `json:"security,omitempty" yaml:"security,omitempty"`
+	ExternalDocs *ExternalDocs          `json:"externalDocs,omitempty" yaml:"externalDocs,omitempty"`
+	Deprecated   bool                   `json:"deprecated,omitempty" yaml:"deprecated,omitempty"`
 }
 
 // OperationAction represents the action type of an operation.

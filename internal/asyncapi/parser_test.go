@@ -388,7 +388,14 @@ func TestCreateMessage(t *testing.T) {
 		}{},
 	}
 
-	parser.createMessage("userCreatedMessage", msgInfo)
+	operation := &Operation{
+		Message:            msgInfo,
+		MessageContentType: "application/json",
+		MessageTitle:       "User Created Message",
+		MessageTags:        []string{"user-events"},
+	}
+
+	parser.createMessage("userCreatedMessage", msgInfo, operation)
 
 	msg, exists := parser.asyncAPI.Components.Messages["userCreatedMessage"]
 	if !exists {
@@ -406,6 +413,14 @@ func TestCreateMessage(t *testing.T) {
 	if msg.Payload == nil {
 		t.Error("Payload should not be nil")
 	}
+
+	if msg.ContentType != "application/json" {
+		t.Errorf("ContentType = %q, want %q", msg.ContentType, "application/json")
+	}
+
+	if msg.Title != "User Created Message" {
+		t.Errorf("Title = %q, want %q", msg.Title, "User Created Message")
+	}
 }
 
 func TestCreateChannel(t *testing.T) {
@@ -415,7 +430,12 @@ func TestCreateChannel(t *testing.T) {
 		"userId": {Description: "User ID"},
 	}
 
-	parser.createChannel("userCreated", "user.created", "userCreatedMessage", params)
+	operation := &Operation{
+		ChannelTitle:       "User Created Channel",
+		ChannelDescription: "Channel for user creation events",
+	}
+
+	parser.createChannel("userCreated", "user.created", "userCreatedMessage", params, operation)
 
 	channel, exists := parser.asyncAPI.Channels["userCreated"]
 	if !exists {
@@ -433,6 +453,14 @@ func TestCreateChannel(t *testing.T) {
 	if _, hasMsg := channel.Messages["userCreatedMessage"]; !hasMsg {
 		t.Error("Expected message reference in channel")
 	}
+
+	if channel.Title != "User Created Channel" {
+		t.Errorf("Title = %q, want %q", channel.Title, "User Created Channel")
+	}
+
+	if channel.Description != "Channel for user creation events" {
+		t.Errorf("Description = %q, want %q", channel.Description, "Channel for user creation events")
+	}
 }
 
 func TestCreateOperation(t *testing.T) {
@@ -443,7 +471,23 @@ func TestCreateOperation(t *testing.T) {
 		Description: "Test description",
 	}
 
-	op := parser.createOperation(spec3.ActionSend, "testChannel", "testMessage", msgInfo)
+	operation := &Operation{
+		Message:       msgInfo,
+		Deprecated:    false,
+		OperationTags: []string{"test"},
+		Security:      []string{"apiKey"},
+		ExternalDocs: &ExternalDocsInfo{
+			Description: "Test docs",
+			URL:         "https://example.com/docs",
+		},
+		Bindings: map[string]interface{}{
+			"nats": map[string]interface{}{
+				"queue": "test-queue",
+			},
+		},
+	}
+
+	op := parser.createOperation(spec3.ActionSend, "testChannel", "testMessage", operation)
 
 	if op.Action != spec3.ActionSend {
 		t.Errorf("Action = %v, want %v", op.Action, spec3.ActionSend)
@@ -455,6 +499,24 @@ func TestCreateOperation(t *testing.T) {
 
 	if op.Description != msgInfo.Description {
 		t.Errorf("Description = %q, want %q", op.Description, msgInfo.Description)
+	}
+
+	// Note: operationId is not a field in AsyncAPI 3.0 - the operation key serves as the ID
+
+	if len(op.Tags) != 1 || op.Tags[0].Name != "test" {
+		t.Errorf("Tags not set correctly")
+	}
+
+	if len(op.Security) != 1 {
+		t.Errorf("Security not set correctly")
+	}
+
+	if op.ExternalDocs == nil || op.ExternalDocs.URL != "https://example.com/docs" {
+		t.Errorf("ExternalDocs not set correctly")
+	}
+
+	if op.Bindings == nil {
+		t.Error("Bindings should not be nil")
 	}
 
 	if len(op.Messages) != 1 {

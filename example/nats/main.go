@@ -28,13 +28,16 @@ import (
 // @protocol nats
 // @protocolVersion 2.9
 // @url nats://localhost:4222
-// @server.title Development NATS Server
-// @server.summary Local development message broker
-// @server.description NATS server running locally for development and testing
-// @server.tag development - Development environment
-// @server.tag local - Local deployment
+// @server.name production
+// @server.title Production NATS Server
+// @server.summary Production message broker
+// @server.description NATS server running in production environment
+// @server.tag production - Production environment
+// @server.tag cloud - Cloud deployment
 // @server.externalDocs.description NATS server setup guide
 // @server.externalDocs.url https://docs.nats.io/running-a-nats-service/introduction
+// @server.variable region enum=us-east,us-west,eu-west default=us-east description=Server region
+// @server.binding nats.queue production-queue
 
 func main() {
 	nc, err := nats.Connect("nats://localhost:4222")
@@ -78,8 +81,18 @@ type Service struct {
 // @type pub
 // @name user.created
 // @summary User Created Event
-// @description Publishes an event when a new user is created
+// @description Publishes an event when a new user is created in the system
 // @payload UserCreatedEvent
+// @operation.tag users
+// @operation.tag events
+// @operation.externalDocs.description User Creation Flow Documentation
+// @operation.externalDocs.url https://docs.example.com/user-creation
+// @channel.title User Creation Channel
+// @channel.description Channel for broadcasting user creation events to all subscribers
+// @message.contentType application/json
+// @message.title User Created Message
+// @message.tag user-events
+// @binding.nats.queue user-creation-queue
 func (s *Service) PublishUserCreated() error {
 	event := UserCreatedEvent{
 		UserID:    "user-123",
@@ -140,6 +153,8 @@ func (s *Service) SubscribeToUserEvents(ctx context.Context) {
 // @summary Order Placed Event
 // @description Publishes an event when a new order is placed
 // @payload OrderPlacedEvent
+// @operation.tag orders
+// @message.contentType application/json
 func (s *Service) PublishOrderPlaced() error {
 	event := OrderPlacedEvent{
 		OrderID:    "order-456",

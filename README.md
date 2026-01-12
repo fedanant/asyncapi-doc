@@ -273,6 +273,7 @@ Server annotations allow you to provide detailed information about your message 
 
 | Property | Annotation | Description | Example |
 |----------|-----------|-------------|---------|
+| Name | `@server.name` | Unique server identifier | `@server.name production` |
 | Host | `@url` or `@host` | Server hostname with optional port | `@url nats://localhost:4222` |
 | Protocol | `@protocol` | Messaging protocol | `@protocol nats` |
 | Protocol Version | `@protocolVersion` | Version of the protocol | `@protocolVersion 2.9` |
@@ -280,8 +281,56 @@ Server annotations allow you to provide detailed information about your message 
 | Title | `@server.title` | Human-friendly server title | `@server.title Production Server` |
 | Summary | `@server.summary` | Brief server overview | `@server.summary Main message broker` |
 | Description | `@server.description` | Detailed server description | `@server.description Production NATS cluster` |
-| Tags | `@server.tag` | Keywords for logical grouping | `@server.tag production - Prod env` |
-| External Docs | `@server.externalDocs.*` | Link to external documentation | See example above |
+| Tags | `@server.tag` | Keywords for logical grouping (multiple allowed) | `@server.tag production - Prod env` |
+| External Docs | `@server.externalDocs.description` | External docs description | `@server.externalDocs.description Setup guide` |
+| External Docs URL | `@server.externalDocs.url` | External docs URL | `@server.externalDocs.url https://docs.example.com` |
+| Variable | `@server.variable` | Server variable definition | `@server.variable region enum=us,eu default=us description=Region` |
+| Security | `@server.security` | Security scheme names (comma-separated) | `@server.security apiKey, oauth2` |
+| Binding | `@server.binding` | Protocol-specific binding | `@server.binding nats.queue production-queue` |
+
+#### Advanced Server Configuration
+
+**Server Variables:**
+```go
+// @server.variable region enum=us-east,us-west,eu-west default=us-east description=Server region
+// @server.variable environment enum=prod,staging,dev default=prod description=Environment name
+```
+
+**Server Security:**
+```go
+// @server.security apiKey
+// @server.security apiKey, oauth2
+```
+
+**Server Bindings:**
+```go
+// @server.binding nats.queue production-queue
+// @server.binding nats.deliverPolicy all
+```
+
+**Complete Example:**
+```go
+// @title Event Processing Service
+// @version 2.0.0
+// @description Distributed event processing service
+// @protocol nats
+// @protocolVersion 2.9
+// @url nats://localhost:4222
+// @server.name production
+// @server.title Production NATS Cluster
+// @server.summary Production event streaming cluster
+// @server.description High-availability NATS cluster for production workloads
+// @server.variable region enum=us-east,us-west,eu-west default=us-east description=Deployment region
+// @server.security apiKey
+// @server.binding nats.queue production-events
+// @server.tag production - Production environment
+// @server.tag cloud - Cloud deployment
+// @server.externalDocs.description Server configuration guide
+// @server.externalDocs.url https://docs.example.com/server-setup
+func main() {
+    // Application code
+}
+```
 
 </details>
 
@@ -317,6 +366,8 @@ func (s *Service) SubscribeToUserUpdates(ctx context.Context) {
 
 **Available tags:**
 
+#### Core Operation Tags
+
 | Tag | Description | Required | Example |
 |-----|-------------|----------|---------|
 | `@type` | Operation type: `pub` (publish) or `sub` (subscribe) | Yes | `@type pub` |
@@ -325,6 +376,84 @@ func (s *Service) SubscribeToUserUpdates(ctx context.Context) {
 | `@description` | Detailed description | No | `@description Publishes when order is placed` |
 | `@payload` | Go type name for message payload | Yes | `@payload OrderPlacedEvent` |
 | `@response` | Go type name for response (automatically enables request-reply pattern) | No | `@response OrderResponse` |
+
+#### Extended Operation Metadata
+
+| Tag | Description | Example |
+|-----|-------------|---------|
+| `@operation.tag` | Tag to categorize operations (can use multiple times) | `@operation.tag users` |
+| `@deprecated` | Mark operation as deprecated (true/false or just flag) | `@deprecated true` |
+| `@security` | Comma-separated list of security scheme names | `@security apiKey, oauth2` |
+| `@operation.externalDocs.description` | External documentation description | `@operation.externalDocs.description API Guide` |
+| `@operation.externalDocs.url` | External documentation URL | `@operation.externalDocs.url https://docs.example.com` |
+
+**Note:** In AsyncAPI 3.0.0, there is no `operationId` field. The operation key in the `operations` object serves as the unique identifier.
+
+#### Channel Metadata
+
+| Tag | Description | Example |
+|-----|-------------|---------|
+| `@channel.title` | Human-readable channel title | `@channel.title User Events Channel` |
+| `@channel.description` | Detailed channel description | `@channel.description Broadcasts user lifecycle events` |
+
+#### Message Metadata
+
+| Tag | Description | Example |
+|-----|-------------|---------|
+| `@message.contenttype` | Content type of the message | `@message.contenttype application/json` |
+| `@message.title` | Human-readable message title | `@message.title User Created Message` |
+| `@message.tag` | Tag for message categorization (can use multiple times) | `@message.tag user-events` |
+| `@message.headers` | Go type name for message headers schema | `@message.headers MessageHeaders` |
+| `@message.correlationid` | Correlation ID field name in headers | `@message.correlationid correlationId` |
+
+#### Protocol Bindings
+
+##### NATS Bindings
+
+| Tag | Description | Example |
+|-----|-------------|---------|
+| `@binding.nats.queue` | NATS queue group name | `@binding.nats.queue user-queue` |
+| `@binding.nats.deliverPolicy` | NATS JetStream deliver policy | `@binding.nats.deliverPolicy all` |
+
+##### AMQP Bindings
+
+| Tag | Description | Example |
+|-----|-------------|---------|
+| `@binding.amqp.exchange` | AMQP exchange name | `@binding.amqp.exchange user-exchange` |
+| `@binding.amqp.routingKey` | AMQP routing key pattern | `@binding.amqp.routingKey user.created` |
+
+##### Kafka Bindings
+
+| Tag | Description | Example |
+|-----|-------------|---------|
+| `@binding.kafka.topic` | Kafka topic name | `@binding.kafka.topic user-events` |
+| `@binding.kafka.partitions` | Number of partitions | `@binding.kafka.partitions 3` |
+| `@binding.kafka.replicas` | Number of replicas | `@binding.kafka.replicas 2` |
+
+**Full Example with Extended Annotations:**
+
+```go
+// PublishUserCreated publishes a user creation event
+// @type pub
+// @name user.created
+// @summary User Created Event
+// @description Publishes an event when a new user is created in the system
+// @payload UserCreatedEvent
+// @operation.tag users
+// @operation.tag events
+// @security apiKey
+// @operation.externalDocs.description User Creation Flow Documentation
+// @operation.externalDocs.url https://docs.example.com/user-creation
+// @channel.title User Creation Channel
+// @channel.description Channel for broadcasting user creation events to all subscribers
+// @message.contentType application/json
+// @message.title User Created Message
+// @message.tag user-events
+// @binding.nats.queue user-creation-queue
+func (s *Service) PublishUserCreated(event UserCreatedEvent) error {
+    // Implementation
+}
+```
 
 </details>
 
